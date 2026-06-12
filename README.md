@@ -898,19 +898,19 @@ To build this production RAG application successfully with AI agents, follow the
 To ensure AI assistants (like Cursor, Cline, or Gemini) stay strictly aligned with the repository's architecture without bloating their context windows, the following system was implemented in this session:
 
 ### 1. Central Routing: `.cursorrules`
-The root [`.cursorrules`](file:///home/ntirth005/Documents/RAG2Prod/.cursorrules) file configures the coding assistant's instructions and forces it to use the modular standards folder before writing any code.
+The root [`.cursorrules`](.cursorrules) file configures the coding assistant's instructions and forces it to use the modular standards folder before writing any code.
 
 ### 2. Modular Rules Directory: `.rules/`
-All guidelines are broken down into domain-specific rules inside the [`.rules/`](file:///home/ntirth005/Documents/RAG2Prod/.rules) directory. The assistant loads these only when relevant to the task, minimizing token bloat:
-* **[`current_task.md`](file:///home/ntirth005/Documents/RAG2Prod/.rules/current_task.md)** — The active stage checklist and schema specifications. The assistant updates this file dynamically as it checks items off.
-* **[`python_standards.md`](file:///home/ntirth005/Documents/RAG2Prod/.rules/python_standards.md)** — Code styling, type hints, and the *Interface-First* design rule (defining shared Pydantic models in `src/core/schemas.py`).
-* **[`api_design.md`](file:///home/ntirth005/Documents/RAG2Prod/.rules/api_design.md)** — Versioned path rules (e.g. `/api/v1`) and structured HTTP error responses.
-* **[`chunking_standards.md`](file:///home/ntirth005/Documents/RAG2Prod/.rules/chunking_standards.md)** — Target token sizing, overlap guidelines, and parent-child chunk mapping.
-* **[`database_rules.md`](file:///home/ntirth005/Documents/RAG2Prod/.rules/database_rules.md)** — Database connection pooling and Pgvector index similarity distance rules.
-* **[`prompt_guidelines.md`](file:///home/ntirth005/Documents/RAG2Prod/.rules/prompt_guidelines.md)** — System prompt structures, validation templates, and structured output parsing.
-* **[`security_standards.md`](file:///home/ntirth005/Documents/RAG2Prod/.rules/security_standards.md)** — Masking rules for PII (Microsoft Presidio) and Row-Level Security on databases.
-* **[`observability_standards.md`](file:///home/ntirth005/Documents/RAG2Prod/.rules/observability_standards.md)** — Logging guidelines (central JSON logs) and tracing formats (W3C Trace Context).
-* **[`testing_policies.md`](file:///home/ntirth005/Documents/RAG2Prod/.rules/testing_policies.md)** — Guidelines for mocking API calls and running automated LLM Judges.
-* **[`deployment_rules.md`](file:///home/ntirth005/Documents/RAG2Prod/.rules/deployment_rules.md)** — Docker container constraints, multi-stage building, and system health checks.
+All guidelines are broken down into domain-specific rules inside the [`.rules/`](.rules/) directory. The assistant loads these only when relevant to the task, minimizing token bloat:
+* **[`current_task.md`](.rules/current_task.md)** — The active stage checklist and schema specifications. The assistant updates this file dynamically as it checks items off.
+* **[`python_standards.md`](.rules/python_standards.md)** — Code styling, type hints, and the *Interface-First* design rule (defining shared Pydantic models in `src/core/schemas.py`).
+* **[`api_design.md`](.rules/api_design.md)** — Versioned path rules (e.g. `/api/v1`) and structured HTTP error responses.
+* **[`chunking_standards.md`](.rules/chunking_standards.md)** — Target token sizing, overlap guidelines, and parent-child chunk mapping.
+* **[`database_rules.md`](.rules/database_rules.md)** — Database connection pooling and Pgvector index similarity distance rules.
+* **[`prompt_guidelines.md`](.rules/prompt_guidelines.md)** — System prompt structures, validation templates, and structured output parsing.
+* **[`security_standards.md`](.rules/security_standards.md)** — Masking rules for PII (Microsoft Presidio) and Row-Level Security on databases.
+* **[`observability_standards.md`](.rules/observability_standards.md)** — Logging guidelines (central JSON logs) and tracing formats (W3C Trace Context).
+* **[`testing_policies.md`](.rules/testing_policies.md)** — Guidelines for mocking API calls and running automated LLM Judges.
+* **[`deployment_rules.md`](.rules/deployment_rules.md)** — Docker container constraints, multi-stage building, and system health checks.
 
 
