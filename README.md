@@ -4,7 +4,6 @@ Building an Agentic RAG System from Prototype to Production
 ## System Design
 
 ```mermaid
-```mermaid
 flowchart TD
 
 %% ==========================
