@@ -150,6 +150,8 @@ subgraph Evaluation
     E3[Faithfulness]
     E4[Answer Relevance]
     E5[LLM Judge]
+    E6[Benchmark Suite]
+    E7[Red Team Testing]
 end
 
 %% ==========================
@@ -240,6 +242,14 @@ M2 -.-> E2
 M2 -.-> E3
 M2 -.-> E4
 M2 -.-> E5
+
+E1 --> E6
+E2 --> E6
+E3 --> E6
+E4 --> E6
+E5 --> E6
+
+E6 --> E7
 ```
 
 ## System Life
