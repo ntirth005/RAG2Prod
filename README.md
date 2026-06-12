@@ -133,15 +133,7 @@ flowchart TD
 ```mermaid
 flowchart TD
 
-%% =====================================================
-%% USER LAYER
-%% =====================================================
-
 User([User])
-
-%% =====================================================
-%% SECURITY
-%% =====================================================
 
 subgraph Security_and_Access_Control
     Auth[Authentication]
@@ -149,10 +141,6 @@ subgraph Security_and_Access_Control
     InputPII[Input PII Detection]
     RateLimit[Rate Limiting]
 end
-
-%% =====================================================
-%% QUERY UNDERSTANDING
-%% =====================================================
 
 subgraph Query_Understanding
     Intent[Intent Classification]
@@ -170,18 +158,10 @@ subgraph Query_Understanding
     CanonicalQuery[Canonical Query]
 end
 
-%% =====================================================
-%% CACHE
-%% =====================================================
-
 subgraph Cache_Layer
     SemanticCache[Semantic Query Cache]
     ResponseCache[Response Cache]
 end
-
-%% =====================================================
-%% RETRIEVAL
-%% =====================================================
 
 subgraph Hybrid_Retrieval
     Dense[Dense Retrieval]
@@ -201,10 +181,6 @@ subgraph Hybrid_Retrieval
     Dedup[Context Deduplication]
 end
 
-%% =====================================================
-%% KNOWLEDGE STORES
-%% =====================================================
-
 subgraph Knowledge_Stores
     VectorDB[(Vector Database)]
 
@@ -214,10 +190,6 @@ subgraph Knowledge_Stores
 
     ObjectStore[(Object Storage)]
 end
-
-%% =====================================================
-%% AGENTIC REASONING
-%% =====================================================
 
 subgraph Agentic_Reasoning
     Planner[Task Planner]
@@ -235,10 +207,6 @@ subgraph Agentic_Reasoning
     Evidence[Evidence Aggregation]
 end
 
-%% =====================================================
-%% CONTEXT ENGINEERING
-%% =====================================================
-
 subgraph Context_Engineering
     ContextBuilder[Context Builder]
 
@@ -247,19 +215,11 @@ subgraph Context_Engineering
     PromptBuilder[Prompt Builder]
 end
 
-%% =====================================================
-%% GENERATION
-%% =====================================================
-
 subgraph Generation
     LLM[Reasoning LLM]
 
     StructuredOutput[Structured Output]
 end
-
-%% =====================================================
-%% OUTPUT SAFETY
-%% =====================================================
 
 subgraph Output_Guardrails
     OutputPII[Output PII Detection]
@@ -271,10 +231,6 @@ subgraph Output_Guardrails
     Safety[Safety Validation]
 end
 
-%% =====================================================
-%% VALIDATION
-%% =====================================================
-
 subgraph Validation
     Grounding[Grounding Verification]
 
@@ -285,29 +241,17 @@ subgraph Validation
     Confidence[Confidence Scoring]
 end
 
-%% =====================================================
-%% HUMAN REVIEW
-%% =====================================================
-
 subgraph Human_in_the_Loop
     HumanReview[Human Review Queue]
 
     Approved[Human Approved Response]
 end
 
-%% =====================================================
-%% DELIVERY
-%% =====================================================
-
 subgraph Response_Delivery
     Streaming[Streaming Layer]
 
     FinalResponse[Final Response]
 end
-
-%% =====================================================
-%% OBSERVABILITY
-%% =====================================================
 
 subgraph Observability
     Tracing[Distributed Tracing]
@@ -320,10 +264,6 @@ subgraph Observability
 
     Tokens[Token Usage Analytics]
 end
-
-%% =====================================================
-%% EVALUATION
-%% =====================================================
 
 subgraph Evaluation
     Precision[Retrieval Precision]
@@ -341,10 +281,6 @@ subgraph Evaluation
     RedTeam[Red Team Testing]
 end
 
-%% =====================================================
-%% CONTINUOUS IMPROVEMENT
-%% =====================================================
-
 subgraph Continuous_Improvement
     Feedback[Feedback Store]
 
@@ -360,10 +296,6 @@ subgraph Continuous_Improvement
 
     FineTune[Fine Tuning Dataset]
 end
-
-%% =====================================================
-%% MAIN REQUEST FLOW
-%% =====================================================
 
 User --> Auth
 Auth --> RBAC
@@ -394,10 +326,6 @@ SemanticCache -->|Cache Hit| Streaming
 
 SemanticCache -->|Cache Miss| Dense
 
-%% =====================================================
-%% RETRIEVAL FLOW
-%% =====================================================
-
 CanonicalQuery --> Dense
 CanonicalQuery --> Sparse
 CanonicalQuery --> Graph
@@ -422,10 +350,6 @@ Compression --> Dedup
 
 Dedup --> Planner
 
-%% =====================================================
-%% AGENT FLOW
-%% =====================================================
-
 Planner --> Decompose
 
 Decompose --> ToolSelect
@@ -445,10 +369,6 @@ NeedMore -->|Yes| Dense
 NeedMore -->|No| Evidence
 
 Evidence --> ContextBuilder
-
-%% =====================================================
-%% GENERATION FLOW
-%% =====================================================
 
 ContextBuilder --> CitationBuilder
 
@@ -474,10 +394,6 @@ Hallucination --> Consistency
 
 Consistency --> Confidence
 
-%% =====================================================
-%% CONFIDENCE DECISION
-%% =====================================================
-
 Confidence --> Decision{Confidence OK?}
 
 Decision -->|High| ResponseCache
@@ -488,17 +404,9 @@ HumanReview --> Approved
 
 Approved --> ResponseCache
 
-%% =====================================================
-%% DELIVERY
-%% =====================================================
-
 ResponseCache --> Streaming
 
 Streaming --> FinalResponse
-
-%% =====================================================
-%% OBSERVABILITY
-%% =====================================================
 
 Intent -.-> Tracing
 
@@ -517,16 +425,11 @@ LLM -.-> Tracing
 Confidence -.-> Tracing
 
 Tracing --> Logs
-
 Logs --> Latency
 
 Latency --> Cost
 
 Cost --> Tokens
-
-%% =====================================================
-%% EVALUATION
-%% =====================================================
 
 Logs -.-> Precision
 
@@ -549,10 +452,6 @@ Relevance --> Benchmark
 LLMJudge --> Benchmark
 
 Benchmark --> RedTeam
-
-%% =====================================================
-%% FEEDBACK LOOPS
-%% =====================================================
 
 HumanReview --> Feedback
 
@@ -587,6 +486,7 @@ KnowledgeUpdates -.-> Postgres
 KnowledgeUpdates -.-> KG
 
 FineTune -.-> LLM
+```
 
 ### Data Flow & Communication Protocols
 
