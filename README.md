@@ -5,6 +5,9 @@ Building an Agentic RAG System from Prototype to Production
 
 ### Development Roadmap
 
+<details>
+<summary><b>🔍 Click to expand Development Roadmap Diagram</b></summary>
+
 ```mermaid
 flowchart TD
     S0["Stage 0: Foundation & Project Setup"]
@@ -49,6 +52,7 @@ flowchart TD
     classDef milestoneNode fill:#ffffff,stroke:#0f172a,stroke-width:3px,color:#0f172a;
     class M1,M2,M3,M4 milestoneNode;
 ```
+</details>
 
 ### Detailed Stage Checklist
 
@@ -130,6 +134,9 @@ flowchart TD
 ## System Design
 
 ### High Level Architecture
+<details>
+<summary><b>🔍 Click to expand High Level Architecture Diagram</b></summary>
+
 ```mermaid
 flowchart TD
 
@@ -142,44 +149,38 @@ end
 
 subgraph Query_Understanding
     Intent[Intent Classification]
-    Complexity{Query Complexity}
     Rewrite[Query Rewriting]
     Expansion[Query Expansion]
     HyDE[HyDE Generation]
-    MultiQuery[Multi Query Generation]
-    CanonicalQuery[Canonical Query]
 end
 
 subgraph Cache_Layer
-    SemanticCache[Semantic Query Cache]
+    SemanticQueryCache[Semantic Query Cache]
 end
 
 subgraph Knowledge_Stores
-    VectorDB[(Vector Database)]
-    Postgres[(Postgres Database)]
-    KG[(Knowledge Graph)]
-    ObjectStore[(Object Storage)]
+    VectorDB[(Vector DB)]
+    RelationalDB[(Relational DB)]
+    GraphDB[(Graph DB)]
+    ObjectStorage[(Object Storage)]
 end
 
 subgraph Hybrid_Retrieval
-    Dense[Dense Retrieval]
-    Sparse[BM25 Retrieval]
-    Graph[Knowledge Graph Retrieval]
-    MetadataFilter[Metadata Filtering]
-    Fusion[Hybrid Fusion]
+    Dense[Dense Vector Retrieval]
+    Sparse[Sparse BM25 Retrieval]
+    Graph[Graph Retrieval]
+    Filter[Metadata Filtering]
+    Fusion[RRF Fusion]
     Reranker[Cross Encoder Reranker]
-    Compression[Context Compression]
-    Dedup[Context Deduplication]
+    ContextCompress[Context Compression]
+    Dedup[Deduplication]
 end
 
 subgraph Agentic_Reasoning
     Planner[Task Planner]
-    Decompose[Task Decomposition]
     ToolSelect[Tool Selection]
     ToolExec[Tool Execution]
-    ToolFailure{Tool Failed?}
-    NeedMore{Need More Evidence?}
-    Evidence[Evidence Aggregation]
+    ReasoningLoop{Reasoning Loop}
 end
 
 subgraph Context_Engineering
@@ -467,6 +468,9 @@ Evaluated by Output Guardrails prior to delivery or caching.
 
 Parses raw documents and extracts semantic structure using parser tools. Generates metadata and embeddings stored in Pgvector, PostgreSQL, and GraphDB (e.g., Neo4j).
 
+<details>
+<summary><b>🔍 Click to expand Knowledge Ingestion Subsystem Diagram</b></summary>
+
 ```mermaid
 flowchart TD
 
@@ -515,11 +519,15 @@ Entities --> GraphDB[(Knowledge Graph)]
 Source --> ObjectStore[(Object Storage)]
 
 ```
+</details>
 
 
 ### Query Understanding Subsystem
 
 Analyzes and standardizes incoming queries by scanning for PII, classifying user intent, and dynamically rewriting or expanding queries to generate optimal search terms.
+
+<details>
+<summary><b>🔍 Click to expand Query Understanding Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -553,10 +561,14 @@ flowchart TD
     Cache -->|Miss| Retrieval[Retrieval System]
 
 ```
+</details>
 
 ### Hybrid Retrieval Subsystem
 
 Combines dense vector search, sparse keyword search (BM25), and knowledge graph queries. Filters results by metadata, fuses them via RRF, and applies cross-encoder reranking and compression.
+
+<details>
+<summary><b>🔍 Click to expand Hybrid Retrieval Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -602,10 +614,14 @@ Dedup[Deduplication]
 Dedup --> Results[Retrieved Context]
 
 ```
+</details>
 
 ### Agentic Reasoning Subsystem
 
 Executes task planning and tools autonomously. Employs a reasoning loop to decompose queries, select appropriate tools, inspect results, and retrieve additional evidence if required.
+
+<details>
+<summary><b>🔍 Click to expand Agentic Reasoning Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -648,10 +664,14 @@ Evidence[Evidence Aggregation]
 
 Evidence --> Output[Reasoning Output]
 ```
+</details>
 
 ### Context Engineering Subsystem
 
 Assembles the final model prompt. Standardizes retrieved snippets, compresses redundant contexts, and injects clear citation indexes to ensure transparent references.
+
+<details>
+<summary><b>🔍 Click to expand Context Engineering Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -676,10 +696,14 @@ Prompt[Prompt Builder]
 
 Prompt --> FinalPrompt[Final Prompt]
 ```
+</details>
 
 ### Generation & Validation Subsystem
 
 Processes inputs using reasoning LLMs and enforces structured output formats (e.g., Pydantic schemas). Validates safety (PII, toxicity) and verifies grounding to catch hallucinations.
+
+<details>
+<summary><b>🔍 Click to expand Generation & Validation Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -726,10 +750,14 @@ Consistency --> Confidence
 
 Confidence[Confidence Score]
 ```
+</details>
 
 ### Human Review Subsystem
 
 Provides a safety-net queue for low-confidence model responses, routing queries for human validation and approval before caching and delivering streamed responses to users.
+
+<details>
+<summary><b>🔍 Click to expand Human Review Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -760,10 +788,14 @@ Stream[Streaming Layer]
 
 Stream --> User[Final Response]
 ```
+</details>
 
 ### Observability Subsystem
 
 Monitors system health and tracing endpoints. Traces call chains using OpenTelemetry, aggregates log streams, and tracks latency, costs, and token consumption metrics.
+
+<details>
+<summary><b>🔍 Click to expand Observability Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -790,10 +822,14 @@ Tokens --> Dashboard
 
 Dashboard[Monitoring Dashboard]
 ```
+</details>
 
 ### Evaluation Subsystem
 
 Evaluates system accuracy using production log traces. Measures precision, recall, faithfulness, and answer relevance via a benchmark suite and automated LLM Judges.
+
+<details>
+<summary><b>🔍 Click to expand Evaluation Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -830,10 +866,14 @@ RedTeam --> Report
 
 Report[Evaluation Report]
 ```
+</details>
 
 ### Continuous Improvement Subsystem
 
 Closes the feedback loop by writing log metrics and human reviews to a central store, driving automated fine-tuning datasets, prompt optimizations, and retriever updates.
+
+<details>
+<summary><b>🔍 Click to expand Continuous Improvement Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -875,6 +915,9 @@ Guardrails[Guardrail Updates]
 Knowledge[Knowledge Updates]
 
 FineTune[Fine Tuning Dataset]
+```
+</details>
+
 
 ## Getting Started
 
