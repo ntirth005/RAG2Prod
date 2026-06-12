@@ -2,189 +2,124 @@
 Building an Agentic RAG System from Prototype to Production
 
 ## Development Stages
-```mermaid
-flowchart TD
 
-S0["Stage 0<br/>Foundation & Project Setup"]
-
-S1["Stage 1<br/>Knowledge Ingestion"]
-
-S2["Stage 2<br/>Storage Layer"]
-
-S3["Stage 3<br/>Basic Retrieval"]
-
-S4["Stage 4<br/>Context Engineering"]
-
-S5["Stage 5<br/>Generation Layer"]
-
-S6["Stage 6<br/>Query Understanding"]
-
-S7["Stage 7<br/>Hybrid Retrieval"]
-
-S8["Stage 8<br/>Validation Layer"]
-
-S9["Stage 9<br/>Security Layer"]
-
-S10["Stage 10<br/>Observability"]
-
-S11["Stage 11<br/>Semantic Cache"]
-
-S12["Stage 12<br/>Agentic Reasoning"]
-
-S13["Stage 13<br/>Recursive Retrieval"]
-
-S14["Stage 14<br/>Human Review"]
-
-S15["Stage 15<br/>Evaluation"]
-
-S16["Stage 16<br/>Red Teaming"]
-
-S17["Stage 17<br/>Continuous Improvement"]
-
-S18["Stage 18<br/>Enterprise Features"]
-
-S0 --> S1
-
-S1 --> S2
-
-S2 --> S3
-
-S3 --> S4
-
-S4 --> S5
-
-S5 --> S6
-
-S6 --> S7
-
-S7 --> S8
-
-S8 --> S9
-
-S9 --> S10
-
-S10 --> S11
-
-S11 --> S12
-
-S12 --> S13
-
-S13 --> S14
-
-S14 --> S15
-
-S15 --> S16
-
-S16 --> S17
-
-S17 --> S18
-
-%% Milestones
-
-S3 -.-> M1["Milestone 1<br/>First Working RAG"]
-
-S7 -.-> M2["Milestone 2<br/>Enterprise Retrieval"]
-
-S12 -.-> M3["Milestone 3<br/>Agentic RAG"]
-
-S18 -.-> M4["Milestone 4<br/>Production Grade Enterprise System"]
-```
+### Development Roadmap
 
 ```mermaid
 flowchart TD
+    subgraph M1["Milestone 1: First Working RAG"]
+        S0["Stage 0: Foundation"] --> S1["Stage 1: Ingestion"]
+        S1 --> S2["Stage 2: Storage"]
+        S2 --> S3["Stage 3: Basic Retrieval"]
+    end
 
-S1["Stage 1
-• Document Parsing
-• Structure Extraction
-• Chunking
-• Metadata Generation
-• Embeddings"]
+    subgraph M2["Milestone 2: Enterprise Retrieval"]
+        S3 --> S4["Stage 4: Context Eng"]
+        S4 --> S5["Stage 5: Generation"]
+        S5 --> S6["Stage 6: Query Understanding"]
+        S6 --> S7["Stage 7: Hybrid Retrieval"]
+    end
 
-S2["Stage 2
-• Vector DB
-• Postgres
-• Object Storage"]
+    subgraph M3["Milestone 3: Agentic RAG"]
+        S7 --> S8["Stage 8: Validation"]
+        S8 --> S9["Stage 9: Security"]
+        S9 --> S10["Stage 10: Observability"]
+        S10 --> S11["Stage 11: Semantic Cache"]
+        S11 --> S12["Stage 12: Agentic Reasoning"]
+    end
 
-S3["Stage 3
-• Dense Retrieval
-• Metadata Filters"]
-
-S4["Stage 4
-• Context Builder
-• Prompt Builder
-• Citations"]
-
-S5["Stage 5
-• LLM Integration
-• Structured Outputs"]
-
-S6["Stage 6
-• Intent Classification
-• Query Rewriting
-• Query Expansion"]
-
-S7["Stage 7
-• BM25
-• Hybrid Fusion
-• Reranking"]
-
-S8["Stage 8
-• Grounding Check
-• Hallucination Detection
-• Confidence Score"]
-
-S9["Stage 9
-• Authentication
-• RBAC
-• PII Detection"]
-
-S10["Stage 10
-• Logs
-• Tracing
-• Cost Monitoring"]
-
-S11["Stage 11
-• Query Cache
-• Response Cache"]
-
-S12["Stage 12
-• Planner
-• Tool Selection
-• Tool Execution"]
-
-S13["Stage 13
-• Recursive Retrieval
-• Evidence Loop"]
-
-S14["Stage 14
-• Human Approval Queue"]
-
-S15["Stage 15
-• Precision
-• Recall
-• Faithfulness"]
-
-S16["Stage 16
-• Prompt Injection Tests
-• Adversarial Testing"]
-
-S17["Stage 17
-• Feedback Store
-• Optimization Loops"]
-
-S18["Stage 18
-• Knowledge Graph
-• Multi-Agent System
-• Fine-Tuning Pipeline"]
-
-S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9 --> S10 --> S11 --> S12 --> S13 --> S14 --> S15 --> S16 --> S17 --> S18
+    subgraph M4["Milestone 4: Production Enterprise"]
+        S12 --> S13["Stage 13: Recursive Retrieval"]
+        S13 --> S14["Stage 14: Human Review"]
+        S14 --> S15["Stage 15: Evaluation"]
+        S15 --> S16["Stage 16: Red Teaming"]
+        S16 --> S17["Stage 17: Continuous Improvement"]
+        S17 --> S18["Stage 18: Enterprise Features"]
+    end
 ```
+
+### Detailed Stage Checklist
+
+#### **Milestone 1: First Working RAG**
+* **Stage 0: Foundation & Project Setup**
+  - [ ] Repository Setup & Structure
+  - [ ] Config Management & Base dependencies
+  - [ ] CI/CD & Dev Environment Setup
+* **Stage 1: Knowledge Ingestion**
+  - [ ] Document Parsing & Structure Extraction
+  - [ ] Chunking & Metadata Generation
+  - [ ] Embedding Generation
+* **Stage 2: Storage Layer**
+  - [ ] Vector Database integration
+  - [ ] Relational DB (Postgres) setup
+  - [ ] Object Storage integration
+* **Stage 3: Basic Retrieval**
+  - [ ] Dense Vector Retrieval
+  - [ ] Metadata Filtering
+
+#### **Milestone 2: Enterprise Retrieval**
+* **Stage 4: Context Engineering**
+  - [ ] Context Builder
+  - [ ] Prompt Builder
+  - [ ] Citations Generator
+* **Stage 5: Generation Layer**
+  - [ ] LLM API Integration
+  - [ ] Structured Output Generation
+* **Stage 6: Query Understanding**
+  - [ ] Intent Classification
+  - [ ] Query Rewriting
+  - [ ] Query Expansion
+* **Stage 7: Hybrid Retrieval**
+  - [ ] Sparse (BM25) Retrieval
+  - [ ] Hybrid Fusion (RRF or Reciprocal Rank Fusion)
+  - [ ] Cross-Encoder Reranking
+
+#### **Milestone 3: Agentic RAG**
+* **Stage 8: Validation Layer**
+  - [ ] Grounding Verification
+  - [ ] Hallucination Detection
+  - [ ] Confidence Scoring
+* **Stage 9: Security Layer**
+  - [ ] Authentication & RBAC
+  - [ ] Input/Output PII Detection
+* **Stage 10: Observability**
+  - [ ] Distributed Tracing
+  - [ ] Centralized Logs
+  - [ ] Latency & Cost Monitoring
+* **Stage 11: Semantic Cache**
+  - [ ] Semantic Query Caching
+  - [ ] Exact Response Caching
+* **Stage 12: Agentic Reasoning**
+  - [ ] Task Planner & Decomposition
+  - [ ] Tool Selection & Execution Loop
+
+#### **Milestone 4: Production Grade Enterprise System**
+* **Stage 13: Recursive Retrieval**
+  - [ ] Recursive & Hierarchical Retrieval
+  - [ ] Evidence Aggregation Loop
+* **Stage 14: Human Review**
+  - [ ] Human Approval Queue / Human-in-the-Loop interface
+* **Stage 15: Evaluation**
+  - [ ] Retrieval Precision & Recall metrics
+  - [ ] Answer Relevance & Faithfulness (LLM Judge)
+  - [ ] Benchmark Suite run
+* **Stage 16: Red Teaming**
+  - [ ] Prompt Injection Vulnerability testing
+  - [ ] Adversarial testing suite
+* **Stage 17: Continuous Improvement**
+  - [ ] Feedback Store collection
+  - [ ] Retrieval & Prompt Optimization loops
+  - [ ] Auto-tuning datasets
+* **Stage 18: Enterprise Features**
+  - [ ] Knowledge Graph Retrieval
+  - [ ] Multi-Agent Orchestration
+  - [ ] Fine-Tuning Pipeline setup
 
 ## System Design
 
 ### High Level Architecture
 ```mermaid
-flowchart LR
+flowchart TD
 
 %% =====================================================
 %% USER LAYER
@@ -640,41 +575,99 @@ KnowledgeUpdates -.-> Postgres
 KnowledgeUpdates -.-> KG
 
 FineTune -.-> LLM
+
+### Data Flow & Communication Protocols
+
+To ensure seamless integration across the RAG system, all subsystems communicate using standard protocols and strictly typed data models.
+
+#### 1. Communication Protocols
+* **Internal APIs:** All internal service communications (e.g., between Query Understanding, Hybrid Retrieval, and Agentic Reasoning) use synchronous **HTTP REST/JSON** endpoints for control commands, backed by **gRPC** for high-throughput embedding/vector operations.
+* **Response Delivery:** The final response delivery is streamed to the client using **Server-Sent Events (SSE)** to minimize time-to-first-token (TTFT).
+* **Observability & Tracing:** Distributed tracing headers (W3C Trace Context standard: `traceparent` and `tracestate`) are propagated across all HTTP headers to enable end-to-end telemetry.
+
+#### 2. Serialization Formats & Type Safety
+* **Pydantic Models:** All runtime data schemas are defined as Pydantic models (Python) to enforce strict schema validation, type-casting, and JSON serialization.
+
+#### 3. Core Data Contracts
+
+##### A. User Request (`UserRequest`)
+Passed from the API gateway through the Security and Access Control layer.
+```json
+{
+  "query_id": "uuid-v4",
+  "session_id": "uuid-v4",
+  "raw_query": "string",
+  "user_context": {
+    "user_id": "string",
+    "role": "string",
+    "authorized_groups": ["string"]
+  }
+}
 ```
-### Query Understanding Subsystem
-```mermaid
-flowchart TD
 
-UserQuery[User Query]
-
-UserQuery --> Intent
-
-Intent[Intent Classification]
-
-Intent --> Complexity
-
-Complexity{Complexity Level}
-
-Complexity -->|Simple| Rewrite
-
-Complexity -->|Medium| Expansion
-
-Complexity -->|Complex| HyDE
-
-Rewrite --> Canonical
-
-Expansion --> Canonical
-
-HyDE --> MultiQuery
-
-MultiQuery --> Canonical
-
-Canonical[Canonical Query]
-
-Canonical --> Cache
-
-Cache[Semantic Cache]
+##### B. Canonical Query (`CanonicalQuery`)
+Output of the Query Understanding layer, forwarded to the Cache and Retrieval systems.
+```json
+{
+  "query_id": "uuid-v4",
+  "canonical_text": "string",
+  "intent_class": "string",
+  "complexity": "SIMPLE | MEDIUM | COMPLEX",
+  "rewritten_queries": ["string"],
+  "pii_safe": true
+}
 ```
+
+##### C. Retrieved Document Chunk (`DocumentChunk`)
+Structure returned by the Hybrid Retrieval / Reranking layer.
+```json
+{
+  "document_id": "string",
+  "chunk_id": "string",
+  "text": "string",
+  "similarity_score": 0.89,
+  "rerank_score": 0.95,
+  "source_metadata": {
+    "url": "string",
+    "page_number": 0,
+    "last_modified": "string"
+  }
+}
+```
+
+##### D. Agent Reasoning Trace (`AgentTrace`)
+Maintained by the Agentic Reasoning loop during task planning and execution.
+```json
+{
+  "task_steps": [
+    {
+      "step_id": 0,
+      "description": "string",
+      "tool_selected": "string",
+      "arguments": {},
+      "status": "SUCCESS | FAILED",
+      "observation": "string"
+    }
+  ],
+  "aggregated_evidence": ["string"],
+  "need_more_evidence": false
+}
+```
+
+##### E. Safety & Validation Payload (`ValidationResult`)
+Evaluated by Output Guardrails prior to delivery or caching.
+```json
+{
+  "is_safe": true,
+  "pii_detected": false,
+  "toxicity_detected": false,
+  "groundedness_score": 0.98,
+  "hallucination_detected": false,
+  "confidence_score": 0.94,
+  "requires_human_review": false
+}
+```
+
 
 ### Knowledge Ingestion Subsystem
 
