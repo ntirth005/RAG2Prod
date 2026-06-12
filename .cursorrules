@@ -17,6 +17,7 @@ You are assisting with the development of the **RAG2Prod** repository. To ensure
 * **Core API Framework:** FastAPI (async endpoints, strict typing).
 * **Data Validation:** Pydantic (all payload schemas must inherit from `BaseModel`).
 * **Testing:** Pytest (write unit tests for every stage before moving to the next).
+* **Package & Execution Tooling:** Always use the local virtual environment (`.venv`) and run commands via `uv` for starting the server, running tests, and managing dependencies (e.g. use `uv run uvicorn src.main:app` or `uv run pytest`).
 * **Database clients:**
   * Dense Retrieval -> Pgvector/Postgres
   * Sparse Retrieval -> BM25 via Postgres
