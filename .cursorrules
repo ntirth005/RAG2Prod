@@ -5,11 +5,11 @@ You are assisting with the development of the **RAG2Prod** repository. To ensure
 ---
 
 ## 📋 Gating Rules (Read Before Writing)
-1. **Read Active Task Context:** Before writing any code or proposing changes, you MUST read the [current_task.md](file:///home/ntirth005/Documents/RAG2Prod/current_task.md) file to see the active milestone, target stage requirements, and local checklist.
+1. **Read Active Task Context:** Before writing any code or proposing changes, you MUST read the [current_task.md](file:///home/ntirth005/Documents/RAG2Prod/.rules/current_task.md) file to see the active milestone, target stage requirements, and local checklist.
 2. **Adhere to Global Standards:** For API payloads, serialization schemas, tracing propagation, and logging structures, you MUST refer to the **Data Flow & Communication Protocols** and **Observability Subsystem** sections in [README.md](file:///home/ntirth005/Documents/RAG2Prod/README.md).
 3. **Check Modular Rules:** Consult the specific standards files inside the [`.rules/`](file:///home/ntirth005/Documents/RAG2Prod/.rules) directory (e.g., Python standards, Observability standards) before implementing files to ensure codebase alignment.
-4. **Do Not Scope Creep:** Focus strictly on completing the checklist inside `current_task.md`. Do NOT implement features or structure files for future stages outlined in the main README.md unless explicitly asked.
-5. **Schema Compliance:** All data models, APIs, and serialization schemas MUST strictly comply with the Pydantic data contracts defined in `current_task.md`.
+4. **Do Not Scope Creep:** Focus strictly on completing the checklist inside `.rules/current_task.md`. Do NOT implement features or structure files for future stages outlined in the main README.md unless explicitly asked.
+5. **Schema Compliance:** All data models, APIs, and serialization schemas MUST strictly comply with the Pydantic data contracts defined in `.rules/current_task.md`.
 
 ---
 
@@ -36,4 +36,4 @@ You are assisting with the development of the **RAG2Prod** repository. To ensure
 ## 🔄 How to Interact with the User
 * **Planning Mode:** For any complex change, propose an implementation plan first.
 * **Walkthroughs:** When completing a stage, write a brief walkthrough of what was changed and how to run the corresponding tests.
-* **State Management:** When you finish implementing a checklist item in [current_task.md](file:///home/ntirth005/Documents/RAG2Prod/current_task.md), you MUST update the file by marking that item as completed (`[x]`). Proactively report the updated checklist progress to the user.
+* **State Management:** When you finish implementing a checklist item in [current_task.md](file:///home/ntirth005/Documents/RAG2Prod/.rules/current_task.md), you MUST update the file by marking that item as completed (`[x]`). Proactively report the updated checklist progress to the user.
