@@ -2,177 +2,262 @@
 Building an Agentic RAG System from Prototype to Production
 
 ## System Design
-
 ```mermaid
 flowchart TD
 
-%% ==========================
+%% ==================================================
 %% USER ENTRY
-%% ==========================
+%% ==================================================
 
 U[User Query]
 
-%% ==========================
-%% SECURITY
-%% ==========================
+%% ==================================================
+%% SECURITY & ACCESS
+%% ==================================================
 
-subgraph Security
+subgraph Security_and_Access
     S1[Authentication]
     S2[RBAC / Document Permissions]
-    S3[PII Detection]
+    S3[Input PII Detection]
     S4[Rate Limiting]
 end
 
-%% ==========================
-%% CACHE LAYER
-%% ==========================
+%% ==================================================
+%% QUERY UNDERSTANDING
+%% ==================================================
+
+subgraph Query_Understanding
+    Q1[Intent Classification]
+
+    D1{Query Complexity}
+
+    Q2[Query Rewriting]
+
+    Q3[Query Expansion]
+
+    Q4[HyDE Generation]
+
+    Q5[Multi Query Generation]
+
+    Q6[Canonical Query]
+end
+
+%% ==================================================
+%% CACHE
+%% ==================================================
 
 subgraph Cache
-    C1[Query Cache]
+    C1[Semantic Query Cache]
     C2[Response Cache]
 end
 
-%% ==========================
-%% QUERY INTELLIGENCE
-%% ==========================
-
-subgraph Query_Intelligence
-    Q1[Intent Classification]
-    Q2[Query Rewriting]
-    Q3[Query Expansion]
-    Q4[HyDE Generation]
-    Q5[Multi Query Generation]
-    Q6[Conditional Router]
-end
-
-%% ==========================
+%% ==================================================
 %% RETRIEVAL
-%% ==========================
+%% ==================================================
 
-subgraph Retrieval
+subgraph Hybrid_Retrieval
     R1[Dense Retrieval]
+
     R2[BM25 Retrieval]
+
     R3[Graph Retrieval]
+
     R4[Metadata Filtering]
+
     R5[Hybrid Fusion]
+
     R6[Cross Encoder Reranker]
+
     R7[Context Compression]
+
     R8[Deduplication]
 end
 
-%% ==========================
-%% AGENTIC REASONING
-%% ==========================
-
-subgraph Agentic_Reasoning
-    A1[Planner]
-    A2[Task Decomposition]
-    A3[Tool Selection]
-    A4[Tool Execution]
-    A5[Evidence Aggregation]
-end
-
-%% ==========================
+%% ==================================================
 %% KNOWLEDGE STORES
-%% ==========================
+%% ==================================================
 
 subgraph Knowledge_Stores
     K1[(Vector Database)]
+
     K2[(Postgres Database)]
+
     K3[(Knowledge Graph)]
+
     K4[(Object Storage)]
 end
 
-%% ==========================
-%% CONTEXT ASSEMBLY
-%% ==========================
+%% ==================================================
+%% AGENTIC REASONING
+%% ==================================================
+
+subgraph Agentic_Reasoning
+    A1[Planner]
+
+    A2[Task Decomposition]
+
+    A3[Tool Selection]
+
+    A4[Tool Execution]
+
+    A5[Evidence Aggregation]
+end
+
+%% ==================================================
+%% CONTEXT BUILDING
+%% ==================================================
 
 subgraph Context_Assembly
     CA1[Context Builder]
+
     CA2[Citation Builder]
+
     CA3[Prompt Builder]
 end
 
-%% ==========================
+%% ==================================================
 %% GENERATION
-%% ==========================
+%% ==================================================
 
 subgraph Generation
     G1[Reasoning LLM]
+
     G2[Structured Response]
 end
 
-%% ==========================
+%% ==================================================
+%% OUTPUT GUARDRAILS
+%% ==================================================
+
+subgraph Output_Guardrails
+    OG1[PII Leakage Check]
+
+    OG2[Policy Compliance]
+
+    OG3[Toxicity Check]
+
+    OG4[Safety Validation]
+end
+
+%% ==================================================
 %% VALIDATION
-%% ==========================
+%% ==================================================
 
 subgraph Validation
     V1[Grounding Check]
+
     V2[Hallucination Detection]
-    V3[Policy Validation]
-    V4[Consistency Check]
-    V5[Confidence Scoring]
+
+    V3[Consistency Check]
+
+    V4[Confidence Scoring]
 end
 
-%% ==========================
+%% ==================================================
 %% HUMAN REVIEW
-%% ==========================
+%% ==================================================
 
 subgraph Human_Review
     H1[Human Approval Queue]
 end
 
-%% ==========================
-%% OBSERVABILITY
-%% ==========================
+%% ==================================================
+%% STREAMING
+%% ==================================================
 
-subgraph Observability
-    M1[Tracing]
-    M2[Logs]
-    M3[Latency Metrics]
-    M4[Cost Metrics]
-    M5[Token Usage]
+subgraph Response_Delivery
+    SD1[Streaming Layer]
 end
 
-%% ==========================
-%% EVALUATION
-%% ==========================
-
-subgraph Evaluation
-    E1[Precision]
-    E2[Recall]
-    E3[Faithfulness]
-    E4[Answer Relevance]
-    E5[LLM Judge]
-    E6[Benchmark Suite]
-    E7[Red Team Testing]
-end
-
-%% ==========================
-%% RESPONSE
-%% ==========================
+%% ==================================================
+%% FINAL RESPONSE
+%% ==================================================
 
 O[Final Response]
 
-%% ==========================
+%% ==================================================
+%% OBSERVABILITY
+%% ==================================================
+
+subgraph Observability
+    M1[Tracing]
+
+    M2[Logs]
+
+    M3[Latency Metrics]
+
+    M4[Cost Metrics]
+
+    M5[Token Usage]
+end
+
+%% ==================================================
+%% EVALUATION
+%% ==================================================
+
+subgraph Evaluation
+    E1[Precision]
+
+    E2[Recall]
+
+    E3[Faithfulness]
+
+    E4[Answer Relevance]
+
+    E5[LLM Judge]
+
+    E6[Benchmark Suite]
+
+    E7[Red Team Testing]
+end
+
+%% ==================================================
+%% FEEDBACK LOOP
+%% ==================================================
+
+subgraph Continuous_Improvement
+    F1[Feedback Store]
+
+    F2[Retrieval Tuning]
+
+    F3[Prompt Optimization]
+
+    F4[Agent Optimization]
+
+    F5[Knowledge Updates]
+end
+
+%% ==================================================
 %% MAIN FLOW
-%% ==========================
+%% ==================================================
 
 U --> S1
 S1 --> S2
 S2 --> S3
 S3 --> S4
 
-S4 --> C1
+S4 --> Q1
 
-C1 -->|Cache Hit| O
-C1 -->|Cache Miss| Q1
+Q1 --> D1
 
-Q1 --> Q2
-Q2 --> Q3
-Q3 --> Q4
+D1 -->|Simple| Q2
+D1 -->|Medium| Q3
+D1 -->|Complex| Q4
+
+Q2 --> Q6
+Q3 --> Q6
+
 Q4 --> Q5
 Q5 --> Q6
+
+Q6 --> C1
+
+C1 -->|Cache Hit| O
+C1 -->|Cache Miss| R1
+
+%% ==================================================
+%% RETRIEVAL
+%% ==================================================
 
 Q6 --> R1
 Q6 --> R2
@@ -191,6 +276,10 @@ R5 --> R6
 R6 --> R7
 R7 --> R8
 
+%% ==================================================
+%% AGENTS
+%% ==================================================
+
 R8 --> A1
 
 A1 --> A2
@@ -200,45 +289,73 @@ A4 --> A5
 
 K4 --> A4
 
+%% ==================================================
+%% GENERATION
+%% ==================================================
+
 A5 --> CA1
+
 CA1 --> CA2
 CA2 --> CA3
 
 CA3 --> G1
 G1 --> G2
 
-G2 --> V1
+%% ==================================================
+%% OUTPUT PROTECTION
+%% ==================================================
+
+G2 --> OG1
+OG1 --> OG2
+OG2 --> OG3
+OG3 --> OG4
+
+%% ==================================================
+%% VALIDATION
+%% ==================================================
+
+OG4 --> V1
 V1 --> V2
 V2 --> V3
 V3 --> V4
-V4 --> V5
 
-V5 --> D1{Confidence OK?}
+%% ==================================================
+%% DECISION
+%% ==================================================
 
-D1 -->|Yes| C2
-D1 -->|No| H1
+V4 --> D2{Confidence OK?}
 
-C2 --> O
-H1 --> O
+D2 -->|Yes| C2
 
-%% ==========================
+D2 -->|No| H1
+
+H1 --> C2
+
+%% ==================================================
+%% DELIVERY
+%% ==================================================
+
+C2 --> SD1
+SD1 --> O
+
+%% ==================================================
 %% OBSERVABILITY
-%% ==========================
+%% ==================================================
 
 Q6 -.-> M1
 R6 -.-> M1
 A1 -.-> M1
 G1 -.-> M1
-V5 -.-> M1
+V4 -.-> M1
 
 M1 --> M2
 M2 --> M3
 M3 --> M4
 M4 --> M5
 
-%% ==========================
+%% ==================================================
 %% EVALUATION
-%% ==========================
+%% ==================================================
 
 M2 -.-> E1
 M2 -.-> E2
@@ -253,7 +370,27 @@ E4 --> E6
 E5 --> E6
 
 E6 --> E7
+
+%% ==================================================
+%% FEEDBACK LOOPS
+%% ==================================================
+
+H1 --> F1
+
+E6 --> F1
+E7 --> F1
+
+F1 --> F2
+F1 --> F3
+F1 --> F4
+F1 --> F5
+
+F2 -.-> R6
+F3 -.-> CA3
+F4 -.-> A1
+F5 -.-> K1
 ```
+
 
 ## System Life
 
