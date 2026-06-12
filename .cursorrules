@@ -4,7 +4,7 @@ You are assisting with the development of the **RAG2Prod** repository. To ensure
 
 ---
 
-## 📋 Gating Rules (Read Before Writing)
+## Gating Rules (Read Before Writing)
 1. **Read Active Task Context:** Before writing any code or proposing changes, you MUST read the [current_task.md](.rules/current_task.md) file to see the active milestone, target stage requirements, and local checklist.
 2. **Adhere to Global Standards:** For API payloads, serialization schemas, tracing propagation, and logging structures, you MUST refer to the **Data Flow & Communication Protocols** and **Observability Subsystem** sections in [README.md](README.md).
 3. **Check Modular Rules:** Consult the specific standards files inside the [`.rules/`](.rules/) directory (e.g., Python standards, Observability standards, Database rules, Prompt guidelines, Chunking standards, API design, Deployment rules) before implementing code to ensure codebase alignment.
@@ -13,7 +13,7 @@ You are assisting with the development of the **RAG2Prod** repository. To ensure
 
 ---
 
-## 🏗️ Architectural Constraints & Tech Stack
+## Architectural Constraints & Tech Stack
 * **Core API Framework:** FastAPI (async endpoints, strict typing).
 * **Data Validation:** Pydantic (all payload schemas must inherit from `BaseModel`).
 * **Testing:** Pytest (write unit tests for every stage before moving to the next).
@@ -26,14 +26,15 @@ You are assisting with the development of the **RAG2Prod** repository. To ensure
 
 ---
 
-## 🛠️ Code Style & Standards
+## Code Style & Standards
 * **Python Typing:** Use strict type hinting (`from typing import List, Dict, Optional`, etc.).
 * **Error Handling:** Always catch specific exceptions, use logging (avoid raw `print` statements), and return structured error JSON payloads from the API layer.
 * **No Placeholders:** Write complete implementations. Do not use comment placeholders (e.g., `# TODO: implement this`) in the final code blocks.
 * **Test-Driven Gating:** You MUST write corresponding unit/integration tests alongside your implementations. However, do NOT automatically run tests after every edit. Test execution is managed manually by the user, or should only be run when the user explicitly instructs you to do so, once all components are fully integrated.
+* **No Temporary Scripts:** Do NOT create temporary scratch files or utility scripts if the logic can be executed inline via Python shell commands (`python -c "..."`) or shell utilities (e.g. sed, grep). Avoid creating files just to delete them.
 ---
 
-## 📝 Git Commit Conventions
+## Git Commit Conventions
 Use structured, Conventional Commit messages in the format `<type>(<scope>): <description>` (scope is optional and minimal):
 * **`feat(<scope>)`**: Introducing new user-facing capabilities, routes, or modules (e.g., `feat(core): added microsoft and discord oauth`, `feat(prototype): add main app orchestrator...`).
 * **`chore(<scope>)`**: Routine maintenance tasks such as updating dependencies (`pyproject.toml`), lockfiles (`uv.lock`), or configuring system parameters (e.g., `chore(config): update environment keys`).
@@ -43,7 +44,7 @@ Use structured, Conventional Commit messages in the format `<type>(<scope>): <de
 
 ---
 
-## 🔄 How to Interact with the User
+## How to Interact with the User
 * **Planning Mode:** For any complex change, propose an implementation plan first.
 * **Walkthroughs:** When completing a stage, write a brief walkthrough of what was changed and how to run the corresponding tests.
 * **State Management:** When you finish implementing a checklist item in [current_task.md](.rules/current_task.md), you MUST update the file by marking that item as completed (`[x]`). Proactively report the updated checklist progress to the user.
