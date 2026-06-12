@@ -31,7 +31,15 @@ You are assisting with the development of the **RAG2Prod** repository. To ensure
 * **Error Handling:** Always catch specific exceptions, use logging (avoid raw `print` statements), and return structured error JSON payloads from the API layer.
 * **No Placeholders:** Write complete implementations. Do not use comment placeholders (e.g., `# TODO: implement this`) in the final code blocks.
 * **Test-Driven Gating:** You MUST write corresponding unit/integration tests alongside your implementations. However, do NOT automatically run tests after every edit. Test execution is managed manually by the user, or should only be run when the user explicitly instructs you to do so, once all components are fully integrated.
+---
 
+## 📝 Git Commit Conventions
+Use structured, Conventional Commit messages in the format `<type>(<scope>): <description>` (scope is optional and minimal):
+* **`feat(<scope>)`**: Introducing new user-facing capabilities, routes, or modules (e.g., `feat(core): added microsoft and discord oauth`, `feat(prototype): add main app orchestrator...`).
+* **`chore(<scope>)`**: Routine maintenance tasks such as updating dependencies (`pyproject.toml`), lockfiles (`uv.lock`), or configuring system parameters (e.g., `chore(config): update environment keys`).
+* **`fix(<scope>)`**: Resolving validation issues, bug fixes, or framework quirks (e.g., `fix(auth): resolve cookie path boundary issue`).
+* **`docs(<scope>)`**: Modifying or creating files containing instructional details (e.g., `docs: finalize project environment configurations`).
+* **`refactor(<scope>)`**: Cleanups or adjustments to code structure that do not change external logic (e.g., `refactor(db): streamline pool initialization`).
 
 ---
 
