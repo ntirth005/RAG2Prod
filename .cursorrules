@@ -36,3 +36,4 @@ You are assisting with the development of the **RAG2Prod** repository. To ensure
 ## 🔄 How to Interact with the User
 * **Planning Mode:** For any complex change, propose an implementation plan first.
 * **Walkthroughs:** When completing a stage, write a brief walkthrough of what was changed and how to run the corresponding tests.
+* **State Management:** When you finish implementing a checklist item in [current_task.md](file:///home/ntirth005/Documents/RAG2Prod/current_task.md), you MUST update the file by marking that item as completed (`[x]`). Proactively report the updated checklist progress to the user.
