@@ -4,10 +4,10 @@ You are currently working on **Milestone 1: First Working RAG**, specifically **
 
 ---
 
-## 🎯 Stage 0 Objectives
+## Stage 0 Objectives
 Prepare the repository workspace, configuration mechanisms, and dependency management systems so we have a clean, reproducible base for the RAG implementation.
 
-## 📋 Task Checklist
+## Task Checklist
 - [ ] **Establish Repository Folder Structure:**
   - Create `/src` directory for active code.
   - Create `/tests` directory for unit/integration tests.
@@ -22,7 +22,7 @@ Prepare the repository workspace, configuration mechanisms, and dependency manag
 
 ---
 
-## 💾 Core Data Contracts / Configurations
+## Core Data Contracts / Configurations
 No network communication data models are required for this stage. Only the settings container class needs to be defined:
 
 ```python
