@@ -7,35 +7,47 @@ Building an Agentic RAG System from Prototype to Production
 
 ```mermaid
 flowchart TD
-    subgraph M1["Milestone 1: First Working RAG"]
-        S0["Stage 0: Foundation"] --> S1["Stage 1: Ingestion"]
-        S1 --> S2["Stage 2: Storage"]
-        S2 --> S3["Stage 3: Basic Retrieval"]
-    end
+    S0["Stage 0: Foundation & Project Setup"]
+    S1["Stage 1: Knowledge Ingestion"]
+    S2["Stage 2: Storage Layer"]
+    S3["Stage 3: Basic Retrieval"]
+    S4["Stage 4: Context Engineering"]
+    S5["Stage 5: Generation Layer"]
+    S6["Stage 6: Query Understanding"]
+    S7["Stage 7: Hybrid Retrieval"]
+    S8["Stage 8: Validation Layer"]
+    S9["Stage 9: Security Layer"]
+    S10["Stage 10: Observability"]
+    S11["Stage 11: Semantic Cache"]
+    S12["Stage 12: Agentic Reasoning"]
+    S13["Stage 13: Recursive Retrieval"]
+    S14["Stage 14: Human Review"]
+    S15["Stage 15: Evaluation"]
+    S16["Stage 16: Red Teaming"]
+    S17["Stage 17: Continuous Improvement"]
+    S18["Stage 18: Enterprise Features"]
 
-    subgraph M2["Milestone 2: Enterprise Retrieval"]
-        S3 --> S4["Stage 4: Context Eng"]
-        S4 --> S5["Stage 5: Generation"]
-        S5 --> S6["Stage 6: Query Understanding"]
-        S6 --> S7["Stage 7: Hybrid Retrieval"]
-    end
+    S0 --> S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9 --> S10 --> S11 --> S12 --> S13 --> S14 --> S15 --> S16 --> S17 --> S18
 
-    subgraph M3["Milestone 3: Agentic RAG"]
-        S7 --> S8["Stage 8: Validation"]
-        S8 --> S9["Stage 9: Security"]
-        S9 --> S10["Stage 10: Observability"]
-        S10 --> S11["Stage 11: Semantic Cache"]
-        S11 --> S12["Stage 12: Agentic Reasoning"]
-    end
+    %% Milestones branching off to the side
+    S3 -.-> M1{{"Milestone 1: First Working RAG"}}
+    S7 -.-> M2{{"Milestone 2: Enterprise Retrieval"}}
+    S12 -.-> M3{{"Milestone 3: Agentic RAG"}}
+    S18 -.-> M4{{"Milestone 4: Production Grade Enterprise System"}}
 
-    subgraph M4["Milestone 4: Production Enterprise"]
-        S12 --> S13["Stage 13: Recursive Retrieval"]
-        S13 --> S14["Stage 14: Human Review"]
-        S14 --> S15["Stage 15: Evaluation"]
-        S15 --> S16["Stage 16: Red Teaming"]
-        S16 --> S17["Stage 17: Continuous Improvement"]
-        S17 --> S18["Stage 18: Enterprise Features"]
-    end
+    %% Styling & Colors
+    classDef m1 fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a;
+    classDef m2 fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,color:#14532d;
+    classDef m3 fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#581c87;
+    classDef m4 fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,color:#78350f;
+
+    class S0,S1,S2,S3 m1;
+    class S4,S5,S6,S7 m2;
+    class S8,S9,S10,S11,S12 m3;
+    class S13,S14,S15,S16,S17,S18 m4;
+
+    classDef milestoneNode fill:#ffffff,stroke:#0f172a,stroke-width:3px,color:#0f172a;
+    class M1,M2,M3,M4 milestoneNode;
 ```
 
 ### Detailed Stage Checklist
@@ -671,6 +683,8 @@ Evaluated by Output Guardrails prior to delivery or caching.
 
 ### Knowledge Ingestion Subsystem
 
+Parses raw documents and extracts semantic structure using parser tools. Generates metadata and embeddings stored in Pgvector, PostgreSQL, and GraphDB (e.g., Neo4j).
+
 ```mermaid
 flowchart TD
 
@@ -723,6 +737,8 @@ Source --> ObjectStore[(Object Storage)]
 
 ### Query Understanding Subsystem
 
+Analyzes and standardizes incoming queries by scanning for PII, classifying user intent, and dynamically rewriting or expanding queries to generate optimal search terms.
+
 ```mermaid
 flowchart TD
 
@@ -757,6 +773,9 @@ flowchart TD
 ```
 
 ### Hybrid Retrieval Subsystem
+
+Combines dense vector search, sparse keyword search (BM25), and knowledge graph queries. Filters results by metadata, fuses them via RRF, and applies cross-encoder reranking and compression.
+
 ```mermaid
 flowchart TD
 
@@ -804,6 +823,8 @@ Dedup --> Results[Retrieved Context]
 
 ### Agentic Reasoning Subsystem
 
+Executes task planning and tools autonomously. Employs a reasoning loop to decompose queries, select appropriate tools, inspect results, and retrieve additional evidence if required.
+
 ```mermaid
 flowchart TD
 
@@ -847,6 +868,9 @@ Evidence --> Output[Reasoning Output]
 ```
 
 ### Context Engineering Subsystem
+
+Assembles the final model prompt. Standardizes retrieved snippets, compresses redundant contexts, and injects clear citation indexes to ensure transparent references.
+
 ```mermaid
 flowchart TD
 
@@ -872,6 +896,8 @@ Prompt --> FinalPrompt[Final Prompt]
 ```
 
 ### Generation & Validation Subsystem
+
+Processes inputs using reasoning LLMs and enforces structured output formats (e.g., Pydantic schemas). Validates safety (PII, toxicity) and verifies grounding to catch hallucinations.
 
 ```mermaid
 flowchart TD
@@ -920,6 +946,9 @@ Confidence[Confidence Score]
 ```
 
 ### Human Review Subsystem
+
+Provides a safety-net queue for low-confidence model responses, routing queries for human validation and approval before caching and delivering streamed responses to users.
+
 ```mermaid
 flowchart TD
 
@@ -951,6 +980,9 @@ Stream --> User[Final Response]
 ```
 
 ### Observability Subsystem
+
+Monitors system health and tracing endpoints. Traces call chains using OpenTelemetry, aggregates log streams, and tracks latency, costs, and token consumption metrics.
+
 ```mermaid
 flowchart TD
 
@@ -978,6 +1010,9 @@ Dashboard[Monitoring Dashboard]
 ```
 
 ### Evaluation Subsystem
+
+Evaluates system accuracy using production log traces. Measures precision, recall, faithfulness, and answer relevance via a benchmark suite and automated LLM Judges.
+
 ```mermaid
 flowchart TD
 
@@ -1015,6 +1050,9 @@ Report[Evaluation Report]
 ```
 
 ### Continuous Improvement Subsystem
+
+Closes the feedback loop by writing log metrics and human reviews to a central store, driving automated fine-tuning datasets, prompt optimizations, and retriever updates.
+
 ```mermaid
 flowchart TD
 
