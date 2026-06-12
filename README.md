@@ -6,7 +6,7 @@ Building an Agentic RAG System from Prototype to Production
 ### Development Roadmap
 
 <details>
-<summary><b>🔍 Click to expand Development Roadmap Diagram</b></summary>
+<summary><b>Click to expand Development Roadmap Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -135,7 +135,7 @@ flowchart TD
 
 ### High Level Architecture
 <details>
-<summary><b>🔍 Click to expand High Level Architecture Diagram</b></summary>
+<summary><b>Click to expand High Level Architecture Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -469,7 +469,7 @@ Evaluated by Output Guardrails prior to delivery or caching.
 Parses raw documents and extracts semantic structure using parser tools. Generates metadata and embeddings stored in Pgvector, PostgreSQL, and GraphDB (e.g., Neo4j).
 
 <details>
-<summary><b>🔍 Click to expand Knowledge Ingestion Subsystem Diagram</b></summary>
+<summary><b>Click to expand Knowledge Ingestion Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -527,7 +527,7 @@ Source --> ObjectStore[(Object Storage)]
 Analyzes and standardizes incoming queries by scanning for PII, classifying user intent, and dynamically rewriting or expanding queries to generate optimal search terms.
 
 <details>
-<summary><b>🔍 Click to expand Query Understanding Subsystem Diagram</b></summary>
+<summary><b>Click to expand Query Understanding Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -568,7 +568,7 @@ flowchart TD
 Combines dense vector search, sparse keyword search (BM25), and knowledge graph queries. Filters results by metadata, fuses them via RRF, and applies cross-encoder reranking and compression.
 
 <details>
-<summary><b>🔍 Click to expand Hybrid Retrieval Subsystem Diagram</b></summary>
+<summary><b>Click to expand Hybrid Retrieval Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -621,7 +621,7 @@ Dedup --> Results[Retrieved Context]
 Executes task planning and tools autonomously. Employs a reasoning loop to decompose queries, select appropriate tools, inspect results, and retrieve additional evidence if required.
 
 <details>
-<summary><b>🔍 Click to expand Agentic Reasoning Subsystem Diagram</b></summary>
+<summary><b>Click to expand Agentic Reasoning Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -671,7 +671,7 @@ Evidence --> Output[Reasoning Output]
 Assembles the final model prompt. Standardizes retrieved snippets, compresses redundant contexts, and injects clear citation indexes to ensure transparent references.
 
 <details>
-<summary><b>🔍 Click to expand Context Engineering Subsystem Diagram</b></summary>
+<summary><b>Click to expand Context Engineering Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -703,7 +703,7 @@ Prompt --> FinalPrompt[Final Prompt]
 Processes inputs using reasoning LLMs and enforces structured output formats (e.g., Pydantic schemas). Validates safety (PII, toxicity) and verifies grounding to catch hallucinations.
 
 <details>
-<summary><b>🔍 Click to expand Generation & Validation Subsystem Diagram</b></summary>
+<summary><b>Click to expand Generation & Validation Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -757,7 +757,7 @@ Confidence[Confidence Score]
 Provides a safety-net queue for low-confidence model responses, routing queries for human validation and approval before caching and delivering streamed responses to users.
 
 <details>
-<summary><b>🔍 Click to expand Human Review Subsystem Diagram</b></summary>
+<summary><b>Click to expand Human Review Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -795,7 +795,7 @@ Stream --> User[Final Response]
 Monitors system health and tracing endpoints. Traces call chains using OpenTelemetry, aggregates log streams, and tracks latency, costs, and token consumption metrics.
 
 <details>
-<summary><b>🔍 Click to expand Observability Subsystem Diagram</b></summary>
+<summary><b>Click to expand Observability Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -829,7 +829,7 @@ Dashboard[Monitoring Dashboard]
 Evaluates system accuracy using production log traces. Measures precision, recall, faithfulness, and answer relevance via a benchmark suite and automated LLM Judges.
 
 <details>
-<summary><b>🔍 Click to expand Evaluation Subsystem Diagram</b></summary>
+<summary><b>Click to expand Evaluation Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
@@ -873,7 +873,7 @@ Report[Evaluation Report]
 Closes the feedback loop by writing log metrics and human reviews to a central store, driving automated fine-tuning datasets, prompt optimizations, and retriever updates.
 
 <details>
-<summary><b>🔍 Click to expand Continuous Improvement Subsystem Diagram</b></summary>
+<summary><b>Click to expand Continuous Improvement Subsystem Diagram</b></summary>
 
 ```mermaid
 flowchart TD
