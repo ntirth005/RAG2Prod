@@ -875,7 +875,27 @@ Guardrails[Guardrail Updates]
 Knowledge[Knowledge Updates]
 
 FineTune[Fine Tuning Dataset]
-```
+
+## Getting Started
+
+This repository uses **Python 3.12** and **`pyproject.toml`** for dependency and project configuration. We recommend using **`uv`** for extremely fast virtual environment setup and dependency resolution.
+
+### Installation & Environment Setup
+
+1. **Create the virtual environment (using Python 3.12):**
+   ```bash
+   uv venv --python 3.12
+   ```
+
+2. **Activate the environment:**
+   ```bash
+   source .venv/bin/activate
+   ```
+
+3. **Install dependencies (including development tools):**
+   ```bash
+   uv sync --extra dev
+   ```
 
 ## Developer Guidelines & Guardrails
 
