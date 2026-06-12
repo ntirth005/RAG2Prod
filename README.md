@@ -133,8 +133,6 @@ flowchart TD
 ```mermaid
 flowchart TD
 
-User([User])
-
 subgraph Security_and_Access_Control
     Auth[Authentication]
     RBAC[Authorization / RBAC]
@@ -144,160 +142,112 @@ end
 
 subgraph Query_Understanding
     Intent[Intent Classification]
-
     Complexity{Query Complexity}
-
     Rewrite[Query Rewriting]
-
     Expansion[Query Expansion]
-
     HyDE[HyDE Generation]
-
     MultiQuery[Multi Query Generation]
-
     CanonicalQuery[Canonical Query]
 end
 
 subgraph Cache_Layer
     SemanticCache[Semantic Query Cache]
-    ResponseCache[Response Cache]
-end
-
-subgraph Hybrid_Retrieval
-    Dense[Dense Retrieval]
-
-    Sparse[BM25 Retrieval]
-
-    Graph[Knowledge Graph Retrieval]
-
-    MetadataFilter[Metadata Filtering]
-
-    Fusion[Hybrid Fusion]
-
-    Reranker[Cross Encoder Reranker]
-
-    Compression[Context Compression]
-
-    Dedup[Context Deduplication]
 end
 
 subgraph Knowledge_Stores
     VectorDB[(Vector Database)]
-
     Postgres[(Postgres Database)]
-
     KG[(Knowledge Graph)]
-
     ObjectStore[(Object Storage)]
+end
+
+subgraph Hybrid_Retrieval
+    Dense[Dense Retrieval]
+    Sparse[BM25 Retrieval]
+    Graph[Knowledge Graph Retrieval]
+    MetadataFilter[Metadata Filtering]
+    Fusion[Hybrid Fusion]
+    Reranker[Cross Encoder Reranker]
+    Compression[Context Compression]
+    Dedup[Context Deduplication]
 end
 
 subgraph Agentic_Reasoning
     Planner[Task Planner]
-
     Decompose[Task Decomposition]
-
     ToolSelect[Tool Selection]
-
     ToolExec[Tool Execution]
-
     ToolFailure{Tool Failed?}
-
     NeedMore{Need More Evidence?}
-
     Evidence[Evidence Aggregation]
 end
 
 subgraph Context_Engineering
     ContextBuilder[Context Builder]
-
     CitationBuilder[Citation Builder]
-
     PromptBuilder[Prompt Builder]
 end
 
 subgraph Generation
     LLM[Reasoning LLM]
-
     StructuredOutput[Structured Output]
 end
 
 subgraph Output_Guardrails
     OutputPII[Output PII Detection]
-
     PolicyCheck[Policy Validation]
-
     Toxicity[Toxicity Detection]
-
     Safety[Safety Validation]
 end
 
 subgraph Validation
     Grounding[Grounding Verification]
-
     Hallucination[Hallucination Detection]
-
     Consistency[Consistency Check]
-
     Confidence[Confidence Scoring]
 end
 
 subgraph Human_in_the_Loop
     HumanReview[Human Review Queue]
-
     Approved[Human Approved Response]
 end
 
 subgraph Response_Delivery
+    ResponseCache[Response Cache]
     Streaming[Streaming Layer]
-
     FinalResponse[Final Response]
 end
 
 subgraph Observability
     Tracing[Distributed Tracing]
-
     Logs[Centralized Logging]
-
     Latency[Latency Metrics]
-
     Cost[Cost Monitoring]
-
     Tokens[Token Usage Analytics]
 end
 
 subgraph Evaluation
     Precision[Retrieval Precision]
-
     Recall[Retrieval Recall]
-
     Faithfulness[Faithfulness]
-
     Relevance[Answer Relevance]
-
     LLMJudge[LLM Judge]
-
     Benchmark[Benchmark Suite]
-
     RedTeam[Red Team Testing]
 end
 
 subgraph Continuous_Improvement
     Feedback[Feedback Store]
-
     RetrievalTuning[Retrieval Tuning]
-
     PromptTuning[Prompt Optimization]
-
     AgentTuning[Agent Optimization]
-
     GuardrailTuning[Guardrail Updates]
-
     KnowledgeUpdates[Knowledge Updates]
-
     FineTune[Fine Tuning Dataset]
 end
 
-User --> Auth
+%% --- Main Request Flow ---
+User([User]) --> Auth
 Auth --> RBAC
 RBAC --> InputPII
 InputPII --> RateLimit
@@ -305,187 +255,118 @@ InputPII --> RateLimit
 RateLimit --> Intent
 
 Intent --> Complexity
-
 Complexity -->|Simple| Rewrite
-
 Complexity -->|Medium| Expansion
-
 Complexity -->|Complex| HyDE
 
 Rewrite --> CanonicalQuery
-
 Expansion --> CanonicalQuery
-
 HyDE --> MultiQuery
-
 MultiQuery --> CanonicalQuery
 
 CanonicalQuery --> SemanticCache
-
 SemanticCache -->|Cache Hit| Streaming
-
 SemanticCache -->|Cache Miss| Dense
 
-CanonicalQuery --> Dense
-CanonicalQuery --> Sparse
-CanonicalQuery --> Graph
-
+%% --- Knowledge Store Inputs ---
 VectorDB --> Dense
-
 Postgres --> Sparse
-
 KG --> Graph
 
+%% --- Retrieval Flow ---
 Dense --> MetadataFilter
 Sparse --> MetadataFilter
 Graph --> MetadataFilter
-
 MetadataFilter --> Fusion
-
 Fusion --> Reranker
-
 Reranker --> Compression
-
 Compression --> Dedup
-
 Dedup --> Planner
 
+%% --- Agent Reasoning Loop ---
 Planner --> Decompose
-
 Decompose --> ToolSelect
-
 ToolSelect --> ToolExec
-
-ObjectStore --> ToolExec
-
 ToolExec --> ToolFailure
-
 ToolFailure -->|Yes| Planner
-
 ToolFailure -->|No| NeedMore
-
 NeedMore -->|Yes| Dense
-
 NeedMore -->|No| Evidence
-
 Evidence --> ContextBuilder
 
+%% --- Context & Generation ---
 ContextBuilder --> CitationBuilder
-
 CitationBuilder --> PromptBuilder
-
 PromptBuilder --> LLM
-
 LLM --> StructuredOutput
 
+%% --- Safety & Validation ---
 StructuredOutput --> OutputPII
-
 OutputPII --> PolicyCheck
-
 PolicyCheck --> Toxicity
-
 Toxicity --> Safety
-
 Safety --> Grounding
-
 Grounding --> Hallucination
-
 Hallucination --> Consistency
-
 Consistency --> Confidence
 
+%% --- Decision & Gating ---
 Confidence --> Decision{Confidence OK?}
-
 Decision -->|High| ResponseCache
-
 Decision -->|Low| HumanReview
-
 HumanReview --> Approved
-
 Approved --> ResponseCache
 
+%% --- Delivery ---
 ResponseCache --> Streaming
-
 Streaming --> FinalResponse
 
-Intent -.-> Tracing
-
-Dense -.-> Tracing
-
-Sparse -.-> Tracing
-
-Graph -.-> Tracing
-
-Planner -.-> Tracing
-
-ToolExec -.-> Tracing
-
-LLM -.-> Tracing
-
-Confidence -.-> Tracing
-
+%% --- Telemetry & Feedback Flow ---
+FinalResponse --> Tracing
 Tracing --> Logs
 Logs --> Latency
-
 Latency --> Cost
-
 Cost --> Tokens
 
-Logs -.-> Precision
-
-Logs -.-> Recall
-
-Logs -.-> Faithfulness
-
-Logs -.-> Relevance
-
-Logs -.-> LLMJudge
+Logs --> Precision
+Logs --> Recall
+Logs --> Faithfulness
+Logs --> Relevance
+Logs --> LLMJudge
 
 Precision --> Benchmark
-
 Recall --> Benchmark
-
 Faithfulness --> Benchmark
-
 Relevance --> Benchmark
-
 LLMJudge --> Benchmark
-
 Benchmark --> RedTeam
 
 HumanReview --> Feedback
-
 Benchmark --> Feedback
-
 RedTeam --> Feedback
 
 Feedback --> RetrievalTuning
-
 Feedback --> PromptTuning
-
 Feedback --> AgentTuning
-
 Feedback --> GuardrailTuning
-
 Feedback --> KnowledgeUpdates
-
 Feedback --> FineTune
 
-RetrievalTuning -.-> Reranker
-
-PromptTuning -.-> PromptBuilder
-
-AgentTuning -.-> Planner
-
-GuardrailTuning -.-> PolicyCheck
-
-KnowledgeUpdates -.-> VectorDB
-
-KnowledgeUpdates -.-> Postgres
-
-KnowledgeUpdates -.-> KG
-
-FineTune -.-> LLM
+%% --- Vertical Layout Constraints ---
+Security_and_Access_Control ~~~ Query_Understanding
+Query_Understanding ~~~ Cache_Layer
+Cache_Layer ~~~ Knowledge_Stores
+Knowledge_Stores ~~~ Hybrid_Retrieval
+Hybrid_Retrieval ~~~ Agentic_Reasoning
+Agentic_Reasoning ~~~ Context_Engineering
+Context_Engineering ~~~ Generation
+Generation ~~~ Output_Guardrails
+Output_Guardrails ~~~ Validation
+Validation ~~~ Human_in_the_Loop
+Human_in_the_Loop ~~~ Response_Delivery
+Response_Delivery ~~~ Observability
+Observability ~~~ Evaluation
+Evaluation ~~~ Continuous_Improvement
 ```
 
 ### Data Flow & Communication Protocols
