@@ -913,6 +913,14 @@ To build this production RAG application successfully with AI agents, follow the
 * If you fail to resolve a bug or test failure after **two consecutive attempts**, or find yourself modifying files outside the immediate active task scope: **STOP**.
 * Revert all modified files (`git checkout -- <file>`) and explain the root cause in plain text before writing any further code.
 
+### 4. Git Commit Conventions
+When committing changes, use Conventional Commit messages in the format `<type>(<scope>): <description>` (scope is optional and minimal):
+* **`feat(<scope>)`**: Introducing new user-facing capabilities, routes, or modules (e.g., `feat(core): added microsoft and discord oauth`, `feat(prototype): add main app orchestrator...`).
+* **`chore(<scope>)`**: Routine maintenance tasks such as updating dependencies (`pyproject.toml`), lockfiles (`uv.lock`), or configuring system parameters (e.g., `chore(config): update environment keys`).
+* **`fix(<scope>)`**: Resolving validation issues, bug fixes, or framework quirks (e.g., `fix(auth): resolve cookie path boundary issue`).
+* **`docs(<scope>)`**: Modifying or creating files containing instructional details (e.g., `docs: finalize project environment configurations`).
+* **`refactor(<scope>)`**: Cleanups or adjustments to code structure that do not change external logic (e.g., `refactor(db): streamline pool initialization`).
+
 ## Repository Governance & AI Alignment Setup
 
 To ensure AI assistants (like Cursor, Cline, or Gemini) stay strictly aligned with the repository's architecture without bloating their context windows, the following system was implemented in this session:
