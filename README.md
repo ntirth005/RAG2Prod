@@ -897,6 +897,12 @@ This repository uses **Python 3.12** and **`pyproject.toml`** for dependency and
    uv sync --extra dev
    ```
 
+4. **Configure environment variables:**
+   Copy the configuration template and populate your local variables:
+   ```bash
+   cp .env.template .env
+   ```
+
 ## Developer Guidelines & Guardrails
 
 To build this production RAG application successfully with AI agents, follow these core guardrails:
@@ -908,6 +914,10 @@ To build this production RAG application successfully with AI agents, follow the
 ### 2. Test-Driven Development (TDD)
 * Before writing any backend or service layer implementation, write a failing unit test first.
 * Verify that the test fails, write the minimum implementation code to make it pass, and then verify the test passes.
+* Run tests manually to verify component integration (auto-tests are disabled to give developer control):
+  ```bash
+  pytest
+  ```
 
 ### 3. Stop & Revert Rule (Troubleshooting)
 * If you fail to resolve a bug or test failure after **two consecutive attempts**, or find yourself modifying files outside the immediate active task scope: **STOP**.
