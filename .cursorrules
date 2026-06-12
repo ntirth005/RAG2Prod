@@ -5,8 +5,9 @@ You are assisting with the development of the **RAG2Prod** repository. To ensure
 ---
 
 ## 📋 Gating Rules (Read Before Writing)
-1. **Read Active Task Context:** Before writing any code or proposing changes, you MUST read the [current_task.md](file:///home/ntirth005/Documents/RAG2Prod/current_task.md) file to see the active milestone, target stage requirements, and relevant data contracts.
-2. **Do Not Scope Creep:** Focus strictly on completing the checklist inside `current_task.md`. Do NOT implement features or structure files for future stages outlined in the main README.md unless explicitly asked.
+1. **Read Active Task Context:** Before writing any code or proposing changes, you MUST read the [current_task.md](file:///home/ntirth005/Documents/RAG2Prod/current_task.md) file to see the active milestone, target stage requirements, and local checklist.
+2. **Adhere to Global Standards:** For API payloads, serialization schemas, tracing propagation, and logging structures, you MUST refer to the **Data Flow & Communication Protocols** and **Observability Subsystem** sections in [README.md](file:///home/ntirth005/Documents/RAG2Prod/README.md).
+3. **Do Not Scope Creep:** Focus strictly on completing the checklist inside `current_task.md`. Do NOT implement features or structure files for future stages outlined in the main README.md unless explicitly asked.
 3. **Schema Compliance:** All data models, APIs, and serialization schemas MUST strictly comply with the Pydantic data contracts defined in `current_task.md`.
 
 ---
