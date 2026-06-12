@@ -876,3 +876,20 @@ Knowledge[Knowledge Updates]
 
 FineTune[Fine Tuning Dataset]
 ```
+
+## Developer Guidelines & Guardrails
+
+To build this production RAG application successfully with AI agents, follow these core guardrails:
+
+### 1. Interface-First Gating
+* Before implementing logic, define all shared models, schemas, and function signatures in `src/core/schemas.py`.
+* Always import and inherit from these shared schemas. Do not write custom inline dictionaries or ad-hoc data models in service layers. This prevents interface drift across files.
+
+### 2. Test-Driven Development (TDD)
+* Before writing any backend or service layer implementation, write a failing unit test first.
+* Verify that the test fails, write the minimum implementation code to make it pass, and then verify the test passes.
+
+### 3. Stop & Revert Rule (Troubleshooting)
+* If you fail to resolve a bug or test failure after **two consecutive attempts**, or find yourself modifying files outside the immediate active task scope: **STOP**.
+* Revert all modified files (`git checkout -- <file>`) and explain the root cause in plain text before writing any further code.
+

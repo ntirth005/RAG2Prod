@@ -15,3 +15,8 @@ All Python code implemented in this repository must adhere to the following guid
 ## 3. Code Quality
 * Follow PEP 8 guidelines.
 * Do not leave commented-out block code or developer test prints. Use the centralized logging system.
+
+## 4. Interface-First Gating & Shared Schemas
+* Before implementing module logic, define all shared models, schemas, and function signatures in `src/core/schemas.py`.
+* Always import and inherit from these shared schemas. Do NOT write custom inline dictionaries or ad-hoc data models in service layers. This prevents interface drift across components.
+
