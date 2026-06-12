@@ -6,106 +6,175 @@ Building an Agentic RAG System from Prototype to Production
 ```mermaid
 flowchart TD
 
-%% USER REQUEST
+%% ==========================
+%% USER ENTRY
+%% ==========================
 
 U[User Query]
 
-%% SECURITY GATE
+%% ==========================
+%% SECURITY
+%% ==========================
 
 subgraph Security
     S1[Authentication]
-    S2[Authorization]
-    S3[PII & Safety Checks]
+    S2[RBAC / Document Permissions]
+    S3[PII Detection]
+    S4[Rate Limiting]
 end
 
-%% QUERY UNDERSTANDING
+%% ==========================
+%% QUERY INTELLIGENCE
+%% ==========================
 
 subgraph Query_Intelligence
     Q1[Intent Classification]
     Q2[Query Rewriting]
     Q3[Query Expansion]
-    Q4[Route Decision]
+    Q4[HyDE Generation]
+    Q5[Multi Query Generation]
+    Q6[Router]
 end
 
+%% ==========================
+%% CACHE LAYER
+%% ==========================
+
+subgraph Cache
+    C1[Query Cache]
+    C2[Semantic Cache]
+end
+
+%% ==========================
 %% RETRIEVAL
+%% ==========================
 
 subgraph Retrieval
-    R1[Semantic Search]
-    R2[Keyword Search]
-    R3[Graph Search]
+    R1[Dense Retrieval]
+    R2[BM25 Retrieval]
+    R3[Graph Retrieval]
     R4[Metadata Filtering]
     R5[Hybrid Fusion]
-    R6[Reranking]
+    R6[Cross Encoder Reranker]
     R7[Context Compression]
+    R8[Deduplication]
 end
 
-%% AGENTIC LAYER
+%% ==========================
+%% AGENTIC SYSTEM
+%% ==========================
 
 subgraph Agentic_Reasoning
-    A1[Task Planner]
-    A2[Agent Coordinator]
-    A3[Tool Execution]
-    A4[Evidence Collection]
+    A1[Planner]
+    A2[Task Decomposition]
+    A3[Tool Selection]
+    A4[Tool Execution]
+    A5[Evidence Aggregation]
 end
 
+%% ==========================
 %% KNOWLEDGE LAYER
+%% ==========================
 
 subgraph Knowledge_Stores
-    K1[(Vector Store)]
-    K2[(Relational Database)]
+    K1[(Vector DB)]
+    K2[(Postgres)]
     K3[(Knowledge Graph)]
     K4[(Object Storage)]
 end
 
-%% CONTEXT BUILDING
+%% ==========================
+%% CONTEXT
+%% ==========================
 
-subgraph Context_Builder
-    C1[Context Assembly]
-    C2[Citation Generation]
-    C3[Prompt Construction]
+subgraph Context_Assembly
+    CA1[Context Builder]
+    CA2[Citation Builder]
+    CA3[Prompt Builder]
 end
 
+%% ==========================
 %% GENERATION
+%% ==========================
 
 subgraph Generation
-    G1[Reasoning LLM]
+    G1[LLM]
     G2[Structured Response]
 end
 
+%% ==========================
 %% VALIDATION
+%% ==========================
 
 subgraph Validation
-    V1[Grounding Verification]
+    V1[Grounding Check]
     V2[Hallucination Detection]
-    V3[Policy Validation]
+    V3[Policy Check]
     V4[Consistency Check]
-    V5[Confidence Scoring]
+    V5[Confidence Score]
 end
 
+%% ==========================
 %% HUMAN REVIEW
+%% ==========================
 
 subgraph Human_Review
-    H1[Escalate Low Confidence]
+    H1[Human Approval Queue]
 end
 
-%% OUTPUT
+%% ==========================
+%% RESPONSE
+%% ==========================
 
 O[Final Response]
 
+%% ==========================
+%% OBSERVABILITY
+%% ==========================
+
+subgraph Observability
+    M1[Tracing]
+    M2[Logs]
+    M3[Latency Metrics]
+    M4[Cost Metrics]
+    M5[Token Usage]
+end
+
+%% ==========================
+%% EVALUATION
+%% ==========================
+
+subgraph Evaluation
+    E1[Precision]
+    E2[Recall]
+    E3[Faithfulness]
+    E4[Answer Relevance]
+    E5[LLM Judge]
+end
+
+%% ==========================
 %% MAIN FLOW
+%% ==========================
 
 U --> S1
 S1 --> S2
 S2 --> S3
+S3 --> S4
 
-S3 --> Q1
+S4 --> C1
+
+C1 -->|Cache Miss| Q1
+C1 -->|Cache Hit| O
+
 Q1 --> Q2
 Q2 --> Q3
 Q3 --> Q4
+Q4 --> Q5
+Q5 --> Q6
 
-Q4 --> R1
-Q4 --> R2
-Q4 --> R3
+Q6 --> R1
+Q6 --> R2
+Q6 --> R3
 
 K1 --> R1
 K2 --> R2
@@ -118,19 +187,21 @@ R3 --> R4
 R4 --> R5
 R5 --> R6
 R6 --> R7
+R7 --> R8
 
-R7 --> A1
+R8 --> A1
 A1 --> A2
 A2 --> A3
 A3 --> A4
+A4 --> A5
 
-K4 --> A3
+K4 --> A4
 
-A4 --> C1
-C1 --> C2
-C2 --> C3
+A5 --> CA1
+CA1 --> CA2
+CA2 --> CA3
 
-C3 --> G1
+CA3 --> G1
 G1 --> G2
 
 G2 --> V1
@@ -140,68 +211,36 @@ V3 --> V4
 V4 --> V5
 
 V5 --> H1
-V5 --> O
+V5 --> C2
 
+C2 --> O
 H1 --> O
 
-%% INGESTION PIPELINE
+%% ==========================
+%% OBSERVABILITY CONNECTIONS
+%% ==========================
 
-subgraph Data_Ingestion
-    D1[Documents / PDFs / Code / Images]
-    D2[Document Parsing]
-    D3[Structure Extraction]
-    D4[Structure Aware Chunking]
-    D5[Metadata Generation]
-    D6[Embedding Generation]
-end
-
-D1 --> D2
-D2 --> D3
-D3 --> D4
-D4 --> D5
-D5 --> D6
-
-D6 --> K1
-D5 --> K2
-D5 --> K3
-D1 --> K4
-
-%% OBSERVABILITY
-
-subgraph Observability
-    M1[Tracing]
-    M2[Logs]
-    M3[Latency]
-    M4[Cost Monitoring]
-end
-
-Q4 -.-> M1
+Q6 -.-> M1
 R6 -.-> M1
+A1 -.-> M1
 G1 -.-> M1
 V5 -.-> M1
 
 M1 --> M2
 M2 --> M3
 M3 --> M4
+M4 --> M5
 
-%% EVALUATION
-
-subgraph Evaluation
-    E1[Precision]
-    E2[Recall]
-    E3[Faithfulness]
-    E4[Answer Relevance]
-    E5[Red Team Testing]
-end
+%% ==========================
+%% EVALUATION CONNECTIONS
+%% ==========================
 
 M2 -.-> E1
 M2 -.-> E2
 M2 -.-> E3
 M2 -.-> E4
-E4 --> E5
-
+M2 -.-> E5
 ```
-
 
 ## System Life
 
