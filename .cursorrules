@@ -1,0 +1,36 @@
+# Project Instructions & Rules (.cursorrules)
+
+You are assisting with the development of the **RAG2Prod** repository. To ensure consistency, code quality, and alignment with the architecture, you MUST strictly adhere to the rules and schemas defined below.
+
+---
+
+## 📋 Gating Rules (Read Before Writing)
+1. **Read Active Task Context:** Before writing any code or proposing changes, you MUST read the [current_task.md](file:///home/ntirth005/Documents/RAG2Prod/current_task.md) file to see the active milestone, target stage requirements, and relevant data contracts.
+2. **Do Not Scope Creep:** Focus strictly on completing the checklist inside `current_task.md`. Do NOT implement features or structure files for future stages outlined in the main README.md unless explicitly asked.
+3. **Schema Compliance:** All data models, APIs, and serialization schemas MUST strictly comply with the Pydantic data contracts defined in `current_task.md`.
+
+---
+
+## 🏗️ Architectural Constraints & Tech Stack
+* **Core API Framework:** FastAPI (async endpoints, strict typing).
+* **Data Validation:** Pydantic (all payload schemas must inherit from `BaseModel`).
+* **Testing:** Pytest (write unit tests for every stage before moving to the next).
+* **Database clients:**
+  * Dense Retrieval -> Pgvector/Postgres
+  * Sparse Retrieval -> BM25 via Postgres
+  * Graph Retrieval -> GraphDB (Neo4j)
+  * Object Storage -> S3-compatible or local directory mocks
+* **Agentic Framework:** Do NOT pull in heavy monolithic frameworks (e.g. LangChain/LlamaIndex) unless explicitly asked. Build lightweight, transparent reasoning planners and tool executors first.
+
+---
+
+## 🛠️ Code Style & Standards
+* **Python Typing:** Use strict type hinting (`from typing import List, Dict, Optional`, etc.).
+* **Error Handling:** Always catch specific exceptions, use logging (avoid raw `print` statements), and return structured error JSON payloads from the API layer.
+* **No Placeholders:** Write complete implementations. Do not use comment placeholders (e.g., `# TODO: implement this`) in the final code blocks.
+
+---
+
+## 🔄 How to Interact with the User
+* **Planning Mode:** For any complex change, propose an implementation plan first.
+* **Walkthroughs:** When completing a stage, write a brief walkthrough of what was changed and how to run the corresponding tests.

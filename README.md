@@ -272,6 +272,7 @@ SemanticCache -->|Cache Miss| Dense
 VectorDB --> Dense
 Postgres --> Sparse
 KG --> Graph
+ObjectStore --> ToolExec
 
 %% --- Retrieval Flow ---
 Dense --> MetadataFilter
