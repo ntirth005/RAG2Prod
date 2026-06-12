@@ -4,6 +4,7 @@ Building an Agentic RAG System from Prototype to Production
 ## System Design
 
 ```mermaid
+```mermaid
 flowchart TD
 
 %% ==========================
@@ -24,6 +25,15 @@ subgraph Security
 end
 
 %% ==========================
+%% CACHE LAYER
+%% ==========================
+
+subgraph Cache
+    C1[Query Cache]
+    C2[Response Cache]
+end
+
+%% ==========================
 %% QUERY INTELLIGENCE
 %% ==========================
 
@@ -33,16 +43,7 @@ subgraph Query_Intelligence
     Q3[Query Expansion]
     Q4[HyDE Generation]
     Q5[Multi Query Generation]
-    Q6[Router]
-end
-
-%% ==========================
-%% CACHE LAYER
-%% ==========================
-
-subgraph Cache
-    C1[Query Cache]
-    C2[Semantic Cache]
+    Q6[Conditional Router]
 end
 
 %% ==========================
@@ -61,7 +62,7 @@ subgraph Retrieval
 end
 
 %% ==========================
-%% AGENTIC SYSTEM
+%% AGENTIC REASONING
 %% ==========================
 
 subgraph Agentic_Reasoning
@@ -73,18 +74,18 @@ subgraph Agentic_Reasoning
 end
 
 %% ==========================
-%% KNOWLEDGE LAYER
+%% KNOWLEDGE STORES
 %% ==========================
 
 subgraph Knowledge_Stores
-    K1[(Vector DB)]
-    K2[(Postgres)]
+    K1[(Vector Database)]
+    K2[(Postgres Database)]
     K3[(Knowledge Graph)]
     K4[(Object Storage)]
 end
 
 %% ==========================
-%% CONTEXT
+%% CONTEXT ASSEMBLY
 %% ==========================
 
 subgraph Context_Assembly
@@ -98,7 +99,7 @@ end
 %% ==========================
 
 subgraph Generation
-    G1[LLM]
+    G1[Reasoning LLM]
     G2[Structured Response]
 end
 
@@ -109,9 +110,9 @@ end
 subgraph Validation
     V1[Grounding Check]
     V2[Hallucination Detection]
-    V3[Policy Check]
+    V3[Policy Validation]
     V4[Consistency Check]
-    V5[Confidence Score]
+    V5[Confidence Scoring]
 end
 
 %% ==========================
@@ -121,12 +122,6 @@ end
 subgraph Human_Review
     H1[Human Approval Queue]
 end
-
-%% ==========================
-%% RESPONSE
-%% ==========================
-
-O[Final Response]
 
 %% ==========================
 %% OBSERVABILITY
@@ -155,6 +150,12 @@ subgraph Evaluation
 end
 
 %% ==========================
+%% RESPONSE
+%% ==========================
+
+O[Final Response]
+
+%% ==========================
 %% MAIN FLOW
 %% ==========================
 
@@ -165,8 +166,8 @@ S3 --> S4
 
 S4 --> C1
 
-C1 -->|Cache Miss| Q1
 C1 -->|Cache Hit| O
+C1 -->|Cache Miss| Q1
 
 Q1 --> Q2
 Q2 --> Q3
@@ -192,6 +193,7 @@ R6 --> R7
 R7 --> R8
 
 R8 --> A1
+
 A1 --> A2
 A2 --> A3
 A3 --> A4
@@ -212,14 +214,16 @@ V2 --> V3
 V3 --> V4
 V4 --> V5
 
-V5 --> H1
-V5 --> C2
+V5 --> D1{Confidence OK?}
+
+D1 -->|Yes| C2
+D1 -->|No| H1
 
 C2 --> O
 H1 --> O
 
 %% ==========================
-%% OBSERVABILITY CONNECTIONS
+%% OBSERVABILITY
 %% ==========================
 
 Q6 -.-> M1
@@ -234,7 +238,7 @@ M3 --> M4
 M4 --> M5
 
 %% ==========================
-%% EVALUATION CONNECTIONS
+%% EVALUATION
 %% ==========================
 
 M2 -.-> E1
