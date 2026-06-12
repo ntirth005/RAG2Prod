@@ -2,397 +2,890 @@
 Building an Agentic RAG System from Prototype to Production
 
 ## System Design
+
+### High Level Architecture
+```mermaid
+flowchart LR
+
+%% =====================================================
+%% USER LAYER
+%% =====================================================
+
+User([User])
+
+%% =====================================================
+%% SECURITY
+%% =====================================================
+
+subgraph Security_and_Access_Control
+    Auth[Authentication]
+    RBAC[Authorization / RBAC]
+    InputPII[Input PII Detection]
+    RateLimit[Rate Limiting]
+end
+
+%% =====================================================
+%% QUERY UNDERSTANDING
+%% =====================================================
+
+subgraph Query_Understanding
+    Intent[Intent Classification]
+
+    Complexity{Query Complexity}
+
+    Rewrite[Query Rewriting]
+
+    Expansion[Query Expansion]
+
+    HyDE[HyDE Generation]
+
+    MultiQuery[Multi Query Generation]
+
+    CanonicalQuery[Canonical Query]
+end
+
+%% =====================================================
+%% CACHE
+%% =====================================================
+
+subgraph Cache_Layer
+    SemanticCache[Semantic Query Cache]
+    ResponseCache[Response Cache]
+end
+
+%% =====================================================
+%% RETRIEVAL
+%% =====================================================
+
+subgraph Hybrid_Retrieval
+    Dense[Dense Retrieval]
+
+    Sparse[BM25 Retrieval]
+
+    Graph[Knowledge Graph Retrieval]
+
+    MetadataFilter[Metadata Filtering]
+
+    Fusion[Hybrid Fusion]
+
+    Reranker[Cross Encoder Reranker]
+
+    Compression[Context Compression]
+
+    Dedup[Context Deduplication]
+end
+
+%% =====================================================
+%% KNOWLEDGE STORES
+%% =====================================================
+
+subgraph Knowledge_Stores
+    VectorDB[(Vector Database)]
+
+    Postgres[(Postgres Database)]
+
+    KG[(Knowledge Graph)]
+
+    ObjectStore[(Object Storage)]
+end
+
+%% =====================================================
+%% AGENTIC REASONING
+%% =====================================================
+
+subgraph Agentic_Reasoning
+    Planner[Task Planner]
+
+    Decompose[Task Decomposition]
+
+    ToolSelect[Tool Selection]
+
+    ToolExec[Tool Execution]
+
+    ToolFailure{Tool Failed?}
+
+    NeedMore{Need More Evidence?}
+
+    Evidence[Evidence Aggregation]
+end
+
+%% =====================================================
+%% CONTEXT ENGINEERING
+%% =====================================================
+
+subgraph Context_Engineering
+    ContextBuilder[Context Builder]
+
+    CitationBuilder[Citation Builder]
+
+    PromptBuilder[Prompt Builder]
+end
+
+%% =====================================================
+%% GENERATION
+%% =====================================================
+
+subgraph Generation
+    LLM[Reasoning LLM]
+
+    StructuredOutput[Structured Output]
+end
+
+%% =====================================================
+%% OUTPUT SAFETY
+%% =====================================================
+
+subgraph Output_Guardrails
+    OutputPII[Output PII Detection]
+
+    PolicyCheck[Policy Validation]
+
+    Toxicity[Toxicity Detection]
+
+    Safety[Safety Validation]
+end
+
+%% =====================================================
+%% VALIDATION
+%% =====================================================
+
+subgraph Validation
+    Grounding[Grounding Verification]
+
+    Hallucination[Hallucination Detection]
+
+    Consistency[Consistency Check]
+
+    Confidence[Confidence Scoring]
+end
+
+%% =====================================================
+%% HUMAN REVIEW
+%% =====================================================
+
+subgraph Human_in_the_Loop
+    HumanReview[Human Review Queue]
+
+    Approved[Human Approved Response]
+end
+
+%% =====================================================
+%% DELIVERY
+%% =====================================================
+
+subgraph Response_Delivery
+    Streaming[Streaming Layer]
+
+    FinalResponse[Final Response]
+end
+
+%% =====================================================
+%% OBSERVABILITY
+%% =====================================================
+
+subgraph Observability
+    Tracing[Distributed Tracing]
+
+    Logs[Centralized Logging]
+
+    Latency[Latency Metrics]
+
+    Cost[Cost Monitoring]
+
+    Tokens[Token Usage Analytics]
+end
+
+%% =====================================================
+%% EVALUATION
+%% =====================================================
+
+subgraph Evaluation
+    Precision[Retrieval Precision]
+
+    Recall[Retrieval Recall]
+
+    Faithfulness[Faithfulness]
+
+    Relevance[Answer Relevance]
+
+    LLMJudge[LLM Judge]
+
+    Benchmark[Benchmark Suite]
+
+    RedTeam[Red Team Testing]
+end
+
+%% =====================================================
+%% CONTINUOUS IMPROVEMENT
+%% =====================================================
+
+subgraph Continuous_Improvement
+    Feedback[Feedback Store]
+
+    RetrievalTuning[Retrieval Tuning]
+
+    PromptTuning[Prompt Optimization]
+
+    AgentTuning[Agent Optimization]
+
+    GuardrailTuning[Guardrail Updates]
+
+    KnowledgeUpdates[Knowledge Updates]
+
+    FineTune[Fine Tuning Dataset]
+end
+
+%% =====================================================
+%% MAIN REQUEST FLOW
+%% =====================================================
+
+User --> Auth
+Auth --> RBAC
+RBAC --> InputPII
+InputPII --> RateLimit
+
+RateLimit --> Intent
+
+Intent --> Complexity
+
+Complexity -->|Simple| Rewrite
+
+Complexity -->|Medium| Expansion
+
+Complexity -->|Complex| HyDE
+
+Rewrite --> CanonicalQuery
+
+Expansion --> CanonicalQuery
+
+HyDE --> MultiQuery
+
+MultiQuery --> CanonicalQuery
+
+CanonicalQuery --> SemanticCache
+
+SemanticCache -->|Cache Hit| Streaming
+
+SemanticCache -->|Cache Miss| Dense
+
+%% =====================================================
+%% RETRIEVAL FLOW
+%% =====================================================
+
+CanonicalQuery --> Dense
+CanonicalQuery --> Sparse
+CanonicalQuery --> Graph
+
+VectorDB --> Dense
+
+Postgres --> Sparse
+
+KG --> Graph
+
+Dense --> MetadataFilter
+Sparse --> MetadataFilter
+Graph --> MetadataFilter
+
+MetadataFilter --> Fusion
+
+Fusion --> Reranker
+
+Reranker --> Compression
+
+Compression --> Dedup
+
+Dedup --> Planner
+
+%% =====================================================
+%% AGENT FLOW
+%% =====================================================
+
+Planner --> Decompose
+
+Decompose --> ToolSelect
+
+ToolSelect --> ToolExec
+
+ObjectStore --> ToolExec
+
+ToolExec --> ToolFailure
+
+ToolFailure -->|Yes| Planner
+
+ToolFailure -->|No| NeedMore
+
+NeedMore -->|Yes| Dense
+
+NeedMore -->|No| Evidence
+
+Evidence --> ContextBuilder
+
+%% =====================================================
+%% GENERATION FLOW
+%% =====================================================
+
+ContextBuilder --> CitationBuilder
+
+CitationBuilder --> PromptBuilder
+
+PromptBuilder --> LLM
+
+LLM --> StructuredOutput
+
+StructuredOutput --> OutputPII
+
+OutputPII --> PolicyCheck
+
+PolicyCheck --> Toxicity
+
+Toxicity --> Safety
+
+Safety --> Grounding
+
+Grounding --> Hallucination
+
+Hallucination --> Consistency
+
+Consistency --> Confidence
+
+%% =====================================================
+%% CONFIDENCE DECISION
+%% =====================================================
+
+Confidence --> Decision{Confidence OK?}
+
+Decision -->|High| ResponseCache
+
+Decision -->|Low| HumanReview
+
+HumanReview --> Approved
+
+Approved --> ResponseCache
+
+%% =====================================================
+%% DELIVERY
+%% =====================================================
+
+ResponseCache --> Streaming
+
+Streaming --> FinalResponse
+
+%% =====================================================
+%% OBSERVABILITY
+%% =====================================================
+
+Intent -.-> Tracing
+
+Dense -.-> Tracing
+
+Sparse -.-> Tracing
+
+Graph -.-> Tracing
+
+Planner -.-> Tracing
+
+ToolExec -.-> Tracing
+
+LLM -.-> Tracing
+
+Confidence -.-> Tracing
+
+Tracing --> Logs
+
+Logs --> Latency
+
+Latency --> Cost
+
+Cost --> Tokens
+
+%% =====================================================
+%% EVALUATION
+%% =====================================================
+
+Logs -.-> Precision
+
+Logs -.-> Recall
+
+Logs -.-> Faithfulness
+
+Logs -.-> Relevance
+
+Logs -.-> LLMJudge
+
+Precision --> Benchmark
+
+Recall --> Benchmark
+
+Faithfulness --> Benchmark
+
+Relevance --> Benchmark
+
+LLMJudge --> Benchmark
+
+Benchmark --> RedTeam
+
+%% =====================================================
+%% FEEDBACK LOOPS
+%% =====================================================
+
+HumanReview --> Feedback
+
+Benchmark --> Feedback
+
+RedTeam --> Feedback
+
+Feedback --> RetrievalTuning
+
+Feedback --> PromptTuning
+
+Feedback --> AgentTuning
+
+Feedback --> GuardrailTuning
+
+Feedback --> KnowledgeUpdates
+
+Feedback --> FineTune
+
+RetrievalTuning -.-> Reranker
+
+PromptTuning -.-> PromptBuilder
+
+AgentTuning -.-> Planner
+
+GuardrailTuning -.-> PolicyCheck
+
+KnowledgeUpdates -.-> VectorDB
+
+KnowledgeUpdates -.-> Postgres
+
+KnowledgeUpdates -.-> KG
+
+FineTune -.-> LLM
+```
+### Query Understanding Subsystem
 ```mermaid
 flowchart TD
 
-%% ==================================================
-%% USER ENTRY
-%% ==================================================
+UserQuery[User Query]
 
-U[User Query]
+UserQuery --> Intent
 
-%% ==================================================
-%% SECURITY & ACCESS
-%% ==================================================
+Intent[Intent Classification]
 
-subgraph Security_and_Access
-    S1[Authentication]
-    S2[RBAC / Document Permissions]
-    S3[Input PII Detection]
-    S4[Rate Limiting]
-end
+Intent --> Complexity
 
-%% ==================================================
-%% QUERY UNDERSTANDING
-%% ==================================================
+Complexity{Complexity Level}
 
-subgraph Query_Understanding
-    Q1[Intent Classification]
+Complexity -->|Simple| Rewrite
 
-    D1{Query Complexity}
+Complexity -->|Medium| Expansion
 
-    Q2[Query Rewriting]
+Complexity -->|Complex| HyDE
 
-    Q3[Query Expansion]
+Rewrite --> Canonical
 
-    Q4[HyDE Generation]
+Expansion --> Canonical
 
-    Q5[Multi Query Generation]
+HyDE --> MultiQuery
 
-    Q6[Canonical Query]
-end
+MultiQuery --> Canonical
 
-%% ==================================================
-%% CACHE
-%% ==================================================
+Canonical[Canonical Query]
 
-subgraph Cache
-    C1[Semantic Query Cache]
-    C2[Response Cache]
-end
+Canonical --> Cache
 
-%% ==================================================
-%% RETRIEVAL
-%% ==================================================
+Cache[Semantic Cache]
+```
 
-subgraph Hybrid_Retrieval
-    R1[Dense Retrieval]
+### Knowledge Ingestion Subsystem
 
-    R2[BM25 Retrieval]
+```mermaid
+flowchart TD
 
-    R3[Graph Retrieval]
+Source[Documents / PDFs / Images / Code]
 
-    R4[Metadata Filtering]
+Source --> Parser
 
-    R5[Hybrid Fusion]
+Parser[Document Parser]
 
-    R6[Cross Encoder Reranker]
+Parser --> Structure
 
-    R7[Context Compression]
+Structure[Structure Extraction]
 
-    R8[Deduplication]
-end
+Structure --> Chunking
 
-%% ==================================================
-%% KNOWLEDGE STORES
-%% ==================================================
+Chunking[Structure Aware Chunking]
 
-subgraph Knowledge_Stores
-    K1[(Vector Database)]
+Chunking --> Metadata
 
-    K2[(Postgres Database)]
+Metadata[Metadata Generation]
 
-    K3[(Knowledge Graph)]
+Metadata --> Summary
 
-    K4[(Object Storage)]
-end
+Metadata --> Keywords
 
-%% ==================================================
-%% AGENTIC REASONING
-%% ==================================================
+Metadata --> Questions
 
-subgraph Agentic_Reasoning
-    A1[Planner]
+Metadata --> Entities
 
-    A2[Task Decomposition]
+Summary --> Embedding
 
-    A3[Tool Selection]
+Keywords --> Embedding
 
-    A4[Tool Execution]
+Questions --> Embedding
 
-    A5[Evidence Aggregation]
-end
+Entities --> Embedding
 
-%% ==================================================
-%% CONTEXT BUILDING
-%% ==================================================
+Embedding[Embedding Generation]
 
-subgraph Context_Assembly
-    CA1[Context Builder]
+Embedding --> VectorDB[(Vector DB)]
 
-    CA2[Citation Builder]
+Metadata --> Postgres[(Postgres)]
 
-    CA3[Prompt Builder]
-end
+Entities --> GraphDB[(Knowledge Graph)]
 
-%% ==================================================
-%% GENERATION
-%% ==================================================
+Source --> ObjectStore[(Object Storage)]
 
-subgraph Generation
-    G1[Reasoning LLM]
-
-    G2[Structured Response]
-end
-
-%% ==================================================
-%% OUTPUT GUARDRAILS
-%% ==================================================
-
-subgraph Output_Guardrails
-    OG1[PII Leakage Check]
-
-    OG2[Policy Compliance]
-
-    OG3[Toxicity Check]
-
-    OG4[Safety Validation]
-end
-
-%% ==================================================
-%% VALIDATION
-%% ==================================================
-
-subgraph Validation
-    V1[Grounding Check]
-
-    V2[Hallucination Detection]
-
-    V3[Consistency Check]
-
-    V4[Confidence Scoring]
-end
-
-%% ==================================================
-%% HUMAN REVIEW
-%% ==================================================
-
-subgraph Human_Review
-    H1[Human Approval Queue]
-end
-
-%% ==================================================
-%% STREAMING
-%% ==================================================
-
-subgraph Response_Delivery
-    SD1[Streaming Layer]
-end
-
-%% ==================================================
-%% FINAL RESPONSE
-%% ==================================================
-
-O[Final Response]
-
-%% ==================================================
-%% OBSERVABILITY
-%% ==================================================
-
-subgraph Observability
-    M1[Tracing]
-
-    M2[Logs]
-
-    M3[Latency Metrics]
-
-    M4[Cost Metrics]
-
-    M5[Token Usage]
-end
-
-%% ==================================================
-%% EVALUATION
-%% ==================================================
-
-subgraph Evaluation
-    E1[Precision]
-
-    E2[Recall]
-
-    E3[Faithfulness]
-
-    E4[Answer Relevance]
-
-    E5[LLM Judge]
-
-    E6[Benchmark Suite]
-
-    E7[Red Team Testing]
-end
-
-%% ==================================================
-%% FEEDBACK LOOP
-%% ==================================================
-
-subgraph Continuous_Improvement
-    F1[Feedback Store]
-
-    F2[Retrieval Tuning]
-
-    F3[Prompt Optimization]
-
-    F4[Agent Optimization]
-
-    F5[Knowledge Updates]
-end
-
-%% ==================================================
-%% MAIN FLOW
-%% ==================================================
-
-U --> S1
-S1 --> S2
-S2 --> S3
-S3 --> S4
-
-S4 --> Q1
-
-Q1 --> D1
-
-D1 -->|Simple| Q2
-D1 -->|Medium| Q3
-D1 -->|Complex| Q4
-
-Q2 --> Q6
-Q3 --> Q6
-
-Q4 --> Q5
-Q5 --> Q6
-
-Q6 --> C1
-
-C1 -->|Cache Hit| O
-C1 -->|Cache Miss| R1
-
-%% ==================================================
-%% RETRIEVAL
-%% ==================================================
-
-Q6 --> R1
-Q6 --> R2
-Q6 --> R3
-
-K1 --> R1
-K2 --> R2
-K3 --> R3
-
-R1 --> R4
-R2 --> R4
-R3 --> R4
-
-R4 --> R5
-R5 --> R6
-R6 --> R7
-R7 --> R8
-
-%% ==================================================
-%% AGENTS
-%% ==================================================
-
-R8 --> A1
-
-A1 --> A2
-A2 --> A3
-A3 --> A4
-A4 --> A5
-
-K4 --> A4
-
-%% ==================================================
-%% GENERATION
-%% ==================================================
-
-A5 --> CA1
-
-CA1 --> CA2
-CA2 --> CA3
-
-CA3 --> G1
-G1 --> G2
-
-%% ==================================================
-%% OUTPUT PROTECTION
-%% ==================================================
-
-G2 --> OG1
-OG1 --> OG2
-OG2 --> OG3
-OG3 --> OG4
-
-%% ==================================================
-%% VALIDATION
-%% ==================================================
-
-OG4 --> V1
-V1 --> V2
-V2 --> V3
-V3 --> V4
-
-%% ==================================================
-%% DECISION
-%% ==================================================
-
-V4 --> D2{Confidence OK?}
-
-D2 -->|Yes| C2
-
-D2 -->|No| H1
-
-H1 --> C2
-
-%% ==================================================
-%% DELIVERY
-%% ==================================================
-
-C2 --> SD1
-SD1 --> O
-
-%% ==================================================
-%% OBSERVABILITY
-%% ==================================================
-
-Q6 -.-> M1
-R6 -.-> M1
-A1 -.-> M1
-G1 -.-> M1
-V4 -.-> M1
-
-M1 --> M2
-M2 --> M3
-M3 --> M4
-M4 --> M5
-
-%% ==================================================
-%% EVALUATION
-%% ==================================================
-
-M2 -.-> E1
-M2 -.-> E2
-M2 -.-> E3
-M2 -.-> E4
-M2 -.-> E5
-
-E1 --> E6
-E2 --> E6
-E3 --> E6
-E4 --> E6
-E5 --> E6
-
-E6 --> E7
-
-%% ==================================================
-%% FEEDBACK LOOPS
-%% ==================================================
-
-H1 --> F1
-
-E6 --> F1
-E7 --> F1
-
-F1 --> F2
-F1 --> F3
-F1 --> F4
-F1 --> F5
-
-F2 -.-> R6
-F3 -.-> CA3
-F4 -.-> A1
-F5 -.-> K1
 ```
 
 
-## System Life
+### Query Understanding Subsystem
+
+```mermaid
+flowchart TD
+
+    User([User Query])
+
+    User --> InputPII[Input PII Detection]
+
+    InputPII --> Intent[Intent Classification]
+
+    Intent --> Complexity{Query Complexity}
+
+    Complexity -->|Simple| Rewrite[Query Rewriting]
+
+    Complexity -->|Medium| Expansion[Query Expansion]
+
+    Complexity -->|Complex| HyDE[HyDE Generation]
+
+    Rewrite --> Canonical[Canonical Query]
+
+    Expansion --> Canonical[Canonical Query]
+
+    HyDE --> MultiQuery[Multi Query Generation]
+
+    MultiQuery --> Canonical
+
+    Canonical --> Cache{Semantic Cache?}
+
+    Cache -->|Hit| Streaming[Streaming Response]
+
+    Cache -->|Miss| Retrieval[Retrieval System]
+
+```
+
+### Hybrid Retrieval Subsystem
+```mermaid
+flowchart TD
+
+Query[Canonical Query]
+
+Query --> Dense
+
+Query --> Sparse
+
+Query --> Graph
+
+Dense[Dense Retrieval]
+Sparse[BM25 Retrieval]
+Graph[Graph Retrieval]
+
+VectorDB[(Vector DB)] --> Dense
+Postgres[(Postgres)] --> Sparse
+KG[(Knowledge Graph)] --> Graph
+
+Dense --> Filter
+Sparse --> Filter
+Graph --> Filter
+
+Filter[Metadata Filtering]
+
+Filter --> Fusion
+
+Fusion[Hybrid Fusion]
+
+Fusion --> Reranker
+
+Reranker[Cross Encoder Reranker]
+
+Reranker --> Compression
+
+Compression[Context Compression]
+
+Compression --> Dedup
+
+Dedup[Deduplication]
+
+Dedup --> Results[Retrieved Context]
+
+```
+
+### Agentic Reasoning Subsystem
+
+```mermaid
+flowchart TD
+
+Context[Retrieved Context]
+
+Context --> Planner
+
+Planner[Task Planner]
+
+Planner --> Decompose
+
+Decompose[Task Decomposition]
+
+Decompose --> ToolSelect
+
+ToolSelect[Tool Selection]
+
+ToolSelect --> ToolExec
+
+ToolExec[Tool Execution]
+
+ToolExec --> ToolStatus
+
+ToolStatus{Tool Success?}
+
+ToolStatus -->|No| Planner
+
+ToolStatus -->|Yes| NeedMore
+
+NeedMore{Need More Evidence?}
+
+NeedMore -->|Yes| Retrieval
+
+NeedMore -->|No| Evidence
+
+Retrieval[Retrieval Layer]
+
+Evidence[Evidence Aggregation]
+
+Evidence --> Output[Reasoning Output]
+```
+
+### Context Engineering Subsystem
+```mermaid
+flowchart TD
+
+Evidence[Evidence]
+
+Evidence --> ContextBuilder
+
+ContextBuilder[Context Builder]
+
+ContextBuilder --> Compression
+
+Compression[Context Compression]
+
+Compression --> Citation
+
+Citation[Citation Builder]
+
+Citation --> Prompt
+
+Prompt[Prompt Builder]
+
+Prompt --> FinalPrompt[Final Prompt]
+```
+
+### Generation & Validation Subsystem
+
+```mermaid
+flowchart TD
+
+Prompt[Final Prompt]
+
+Prompt --> LLM
+
+LLM[Reasoning LLM]
+
+LLM --> Structured
+
+Structured[Structured Output]
+
+Structured --> Guardrail
+
+Guardrail[Output Guardrails]
+
+Guardrail --> PII
+
+PII[PII Check]
+
+PII --> Policy
+
+Policy[Policy Check]
+
+Policy --> Safety
+
+Safety[Safety Validation]
+
+Safety --> Grounding
+
+Grounding[Grounding Verification]
+
+Grounding --> Hallucination
+
+Hallucination[Hallucination Detection]
+
+Hallucination --> Consistency
+
+Consistency[Consistency Check]
+
+Consistency --> Confidence
+
+Confidence[Confidence Score]
+```
+
+### Human Review Subsystem
+```mermaid
+flowchart TD
+
+Confidence[Confidence Score]
+
+Confidence --> Decision
+
+Decision{Confidence OK?}
+
+Decision -->|High| Cache
+
+Decision -->|Low| Human
+
+Human[Human Review Queue]
+
+Human --> Approve
+
+Approve[Approved Response]
+
+Approve --> Cache
+
+Cache[Response Cache]
+
+Cache --> Stream
+
+Stream[Streaming Layer]
+
+Stream --> User[Final Response]
+```
+
+### Observability Subsystem
+```mermaid
+flowchart TD
+
+Tracing[Distributed Tracing]
+
+Tracing --> Logs
+
+Logs[Centralized Logs]
+
+Logs --> Latency
+
+Latency[Latency Metrics]
+
+Latency --> Cost
+
+Cost[Cost Monitoring]
+
+Cost --> Tokens
+
+Tokens[Token Usage Analytics]
+
+Tokens --> Dashboard
+
+Dashboard[Monitoring Dashboard]
+```
+
+### Evaluation Subsystem
+```mermaid
+flowchart TD
+
+Logs[Production Logs]
+
+Logs --> Precision
+
+Logs --> Recall
+
+Logs --> Faithfulness
+
+Logs --> Relevance
+
+Logs --> LLMJudge
+
+Precision --> Benchmark
+
+Recall --> Benchmark
+
+Faithfulness --> Benchmark
+
+Relevance --> Benchmark
+
+LLMJudge --> Benchmark
+
+Benchmark[Benchmark Suite]
+
+Benchmark --> RedTeam
+
+RedTeam[Red Team Testing]
+
+RedTeam --> Report
+
+Report[Evaluation Report]
+```
+
+### Continuous Improvement Subsystem
+```mermaid
+flowchart TD
+
+HumanReview[Human Review Feedback]
+
+Evaluation[Evaluation Results]
+
+RedTeam[Red Team Findings]
+
+HumanReview --> Feedback
+
+Evaluation --> Feedback
+
+RedTeam --> Feedback
+
+Feedback[Feedback Store]
+
+Feedback --> Retrieval
+
+Feedback --> Prompt
+
+Feedback --> Agent
+
+Feedback --> Guardrails
+
+Feedback --> Knowledge
+
+Feedback --> FineTune
+
+Retrieval[Retrieval Tuning]
+
+Prompt[Prompt Optimization]
+
+Agent[Agent Optimization]
+
+Guardrails[Guardrail Updates]
+
+Knowledge[Knowledge Updates]
+
+FineTune[Fine Tuning Dataset]
+```
+
+### System Life
 
 ```mermaid
 flowchart TD
