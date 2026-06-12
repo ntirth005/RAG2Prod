@@ -152,6 +152,7 @@ end
 
 subgraph Cache_Layer
     SemanticCache[Semantic Query Cache]
+    ResponseCache[Response Cache]
 end
 
 subgraph Knowledge_Stores
@@ -213,7 +214,6 @@ subgraph Human_in_the_Loop
 end
 
 subgraph Response_Delivery
-    ResponseCache[Response Cache]
     Streaming[Streaming Layer]
     FinalResponse[Final Response]
 end
@@ -268,6 +268,10 @@ CanonicalQuery --> SemanticCache
 SemanticCache -->|Cache Hit| Streaming
 SemanticCache -->|Cache Miss| Dense
 
+CanonicalQuery --> Dense
+CanonicalQuery --> Sparse
+CanonicalQuery --> Graph
+
 %% --- Knowledge Store Inputs ---
 VectorDB --> Dense
 Postgres --> Sparse
@@ -287,6 +291,8 @@ Dedup --> Planner
 Planner --> Decompose
 Decompose --> ToolSelect
 ToolSelect --> ToolExec
+ObjectStore --> ToolExec
+
 ToolExec --> ToolFailure
 ToolFailure -->|Yes| Planner
 ToolFailure -->|No| NeedMore
@@ -321,18 +327,27 @@ Approved --> ResponseCache
 ResponseCache --> Streaming
 Streaming --> FinalResponse
 
-%% --- Telemetry & Feedback Flow ---
-FinalResponse --> Tracing
+%% --- Observability Telemetry Streams ---
+Intent -.-> Tracing
+Dense -.-> Tracing
+Sparse -.-> Tracing
+Graph -.-> Tracing
+Planner -.-> Tracing
+ToolExec -.-> Tracing
+LLM -.-> Tracing
+Confidence -.-> Tracing
+
 Tracing --> Logs
 Logs --> Latency
 Latency --> Cost
 Cost --> Tokens
 
-Logs --> Precision
-Logs --> Recall
-Logs --> Faithfulness
-Logs --> Relevance
-Logs --> LLMJudge
+%% --- Evaluation Metrics ---
+Logs -.-> Precision
+Logs -.-> Recall
+Logs -.-> Faithfulness
+Logs -.-> Relevance
+Logs -.-> LLMJudge
 
 Precision --> Benchmark
 Recall --> Benchmark
@@ -341,6 +356,7 @@ Relevance --> Benchmark
 LLMJudge --> Benchmark
 Benchmark --> RedTeam
 
+%% --- Optimization Feedback Loops ---
 HumanReview --> Feedback
 Benchmark --> Feedback
 RedTeam --> Feedback
@@ -352,11 +368,20 @@ Feedback --> GuardrailTuning
 Feedback --> KnowledgeUpdates
 Feedback --> FineTune
 
-%% --- Vertical Layout Constraints ---
+RetrievalTuning -.-> Reranker
+PromptTuning -.-> PromptBuilder
+AgentTuning -.-> Planner
+GuardrailTuning -.-> PolicyCheck
+KnowledgeUpdates -.-> VectorDB
+KnowledgeUpdates -.-> Postgres
+KnowledgeUpdates -.-> KG
+FineTune -.-> LLM
+
+%% --- Three-Column Vertical Alignment Constraints ---
+%% Enforces vertical ranking within columns and positions columns side-by-side.
 Security_and_Access_Control ~~~ Query_Understanding
 Query_Understanding ~~~ Cache_Layer
-Cache_Layer ~~~ Knowledge_Stores
-Knowledge_Stores ~~~ Hybrid_Retrieval
+Cache_Layer ~~~ Hybrid_Retrieval
 Hybrid_Retrieval ~~~ Agentic_Reasoning
 Agentic_Reasoning ~~~ Context_Engineering
 Context_Engineering ~~~ Generation
@@ -364,9 +389,12 @@ Generation ~~~ Output_Guardrails
 Output_Guardrails ~~~ Validation
 Validation ~~~ Human_in_the_Loop
 Human_in_the_Loop ~~~ Response_Delivery
-Response_Delivery ~~~ Observability
+
+Knowledge_Stores ~~~ Observability
 Observability ~~~ Evaluation
-Evaluation ~~~ Continuous_Improvement
+
+Security_and_Access_Control --- Knowledge_Stores
+Knowledge_Stores --- Continuous_Improvement
 ```
 
 ### Data Flow & Communication Protocols
