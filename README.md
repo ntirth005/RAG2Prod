@@ -58,9 +58,9 @@ flowchart TD
 
 #### **Milestone 1: First Working RAG**
 * **Stage 0: Foundation & Project Setup**
-  - [ ] Repository Setup & Structure
-  - [ ] Config Management & Base dependencies
-  - [ ] CI/CD & Dev Environment Setup
+  - [x] Repository Setup & Structure
+  - [x] Config Management & Base dependencies
+  - [x] CI/CD & Dev Environment Setup
 * **Stage 1: Knowledge Ingestion**
   - [ ] Document Parsing & Structure Extraction
   - [ ] Chunking & Metadata Generation
