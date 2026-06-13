@@ -946,6 +946,25 @@ This repository uses **Python 3.12** and **`pyproject.toml`** for dependency and
    cp .env.template .env
    ```
 
+### Project Structure
+
+Below is the directory layout established for Stage 0 (Foundation & Project Setup):
+
+```text
+RAG2Prod/
+├── src/                          # Application source root
+│   ├── main.py                   # FastAPI application entry point
+│   └── core/                     # Central system configurations and contracts
+│       ├── __init__.py
+│       ├── config.py             # Settings loader via pydantic-settings
+│       └── schemas.py            # Centralized Pydantic schemas (all shared models live here)
+│
+├── tests/                        # Automated testing suite
+│   ├── __init__.py
+│   ├── conftest.py               # Shared pytest fixtures
+│   └── test_sanity.py            # Sanity test to verify pytest works correctly
+```
+
 ## Developer Guidelines & Guardrails
 
 To build this production RAG application successfully with AI agents, follow these core guardrails:

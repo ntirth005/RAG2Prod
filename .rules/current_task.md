@@ -8,16 +8,16 @@ You are currently working on **Milestone 1: First Working RAG**, specifically **
 Prepare the repository workspace, configuration mechanisms, and dependency management systems so we have a clean, reproducible base for the RAG implementation.
 
 ## Task Checklist
-- [ ] **Establish Repository Folder Structure:**
+- [x] **Establish Repository Folder Structure:**
   - Create `/src` directory for active code.
   - Create `/tests` directory for unit/integration tests.
   - Create configuration directory (e.g., `/config` or `/src/config`).
-- [ ] **Setup Configuration Management:**
+- [x] **Setup Configuration Management:**
   - Choose a configuration framework (e.g., `pydantic-settings` or Python `dotenv`).
   - Create a `.env.template` file with base config placeholders (API keys, Postgres URLs, Vector DB hosts).
-- [ ] **Verify Dependencies:**
+- [x] **Verify Dependencies:**
   - Audit `requirements.txt` and ensure core libraries (`fastapi`, `uvicorn`, `pytest`, `pytest-asyncio`, `pydantic`) are ready for installation.
-- [ ] **Define Base Test Suite:**
+- [x] **Define Base Test Suite:**
   - Set up a dummy test (e.g., `tests/test_sanity.py`) to verify `pytest` works correctly on execution.
 
 ---
