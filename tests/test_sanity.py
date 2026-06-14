@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from src.core.config import settings
+from core.config import settings
 
 def test_pytest_sanity() -> None:
     """

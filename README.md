@@ -466,7 +466,13 @@ Evaluated by Output Guardrails prior to delivery or caching.
 
 ### Knowledge Ingestion Subsystem
 
-Parses raw documents and extracts semantic structure using parser tools. Generates metadata and embeddings stored in Pgvector, PostgreSQL, and GraphDB (e.g., Neo4j).
+Parses raw documents (including PDFs, HTML pages, and raw text) and extracts semantic structure, supporting agentic LLM-OCR tool extraction, web-boilerplate removal, and text cleaning. Generates metadata, deterministic chunk IDs for deduplication, and embeddings stored in Pgvector, PostgreSQL, and GraphDB (e.g., Neo4j).
+
+#### Parsing & OCR Heuristics
+To prevent scanned PDF pages that contain digital watermarks, headers, or footers from bypassing OCR (since they return short metadata text), the parser utilizes a smart image-presence heuristic:
+* **Trigger Condition:** OCR is triggered if the page's extracted text is under 10 characters, OR under 150 characters and the page contains visual images.
+* **LLM-OCR Execution:** When triggered, the page is processed via the multimodal `ocr_page` tool to extract clean Markdown (preserving tables/headings).
+* **Local Caching:** Results are cached under `.cache/ocr/{sha256}.json` to ensure zero redundant API costs.
 
 <details>
 <summary><b>Click to expand Knowledge Ingestion Subsystem Diagram</b></summary>

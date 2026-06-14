@@ -5,26 +5,40 @@ You are currently working on **Milestone 1: First Working RAG**, specifically **
 ---
 
 ## Stage 1 Objectives
-Build the parsing, chunking, metadata generation, and embedding generation pipeline to transform raw documents into structured, embedded chunks ready for indexing.
+Build the parsing, chunking, metadata generation, and embedding generation pipeline to transform raw documents (PDFs, Markdown, Web/HTML, Code) into structured, embedded parent-child chunks ready for indexing.
 
 ---
 
 ## Task Checklist
-- [ ] **Implement Document Parsing:**
+- [x] **Implement Document Parsing:**
   - Build/configure text and Markdown parsers.
-  - Extract document structures (headings, tables, lists).
-- [ ] **Implement Structure-Aware Chunking:**
+  - Implement **PDF Parser** extracting page numbers and text layout.
+  - Implement **OCR Fallback** for scanned document images.
+  - Implement **HTML/Web Search Result Parser** with boilerplate stripping (removing navigation, ads, footers).
+  - Implement **Text Normalization & Clean-up** (Unicode standardization, joining hyphenated breaks).
+  - Extract document structures (headings, tables, lists, code blocks).
+- [x] **Implement Agent Ingestion Tools:**
+  - Develop the **LLM-OCR Agent Tool** (`src/tools/ocr_tool.py`):
+    - Passes scanned PDF pages or images to a Multimodal LLM to extract clean, structured Markdown.
+    - Implement **Local File-Based Caching**: Compute SHA-256 hash of the page bytes/image. Save and load cached results from a local directory (e.g., `.cache/ocr/{sha256}.json`) to avoid duplicate API costs.
+- [x] **Implement Structure-Aware Chunking:**
   - Develop the `StructureAwareChunker` to split documents while respecting paragraph and heading boundaries.
+  - Implement **Code Block Preserver** (ensuring code blocks remain intact).
+  - Implement **Table Preserver** (converting tables to markdown to keep them whole).
   - Implement dynamic boundary balancing to prevent tiny spillovers (e.g., splitting a paragraph into balanced chunks like 250/250 instead of 500/20).
-  - Implement table preservation to prevent splitting tables across chunks.
-- [ ] **Implement Metadata Generation:**
-  - Tag every chunk with standard metadata (`doc_id`, `timestamp`, `access_group`, etc.).
+  - Implement **Token Safety Margin** boundaries (10% token count buffer).
+- [x] **Implement Parent-Child Chunking & Deduplication:**
+  - Generate parent chunks (e.g., ~1000 tokens) for LLM context.
+  - Generate child chunks (e.g., ~200-250 tokens) mapped to parent IDs for vector search.
+  - Implement **Deterministic Chunk ID Generation** (UUID v5 based on document ID and text hash) for database deduplication.
+- [x] **Implement Metadata Generation:**
+  - Tag every chunk with standard metadata (`doc_id`, `page_number` if PDF, `timestamp`, `access_group`, etc.).
   - Setup placeholders/integrations for AI-enriched metadata (summary, keywords, and synthetic questions).
-- [ ] **Implement Embedding Generation:**
+- [x] **Implement Embedding Generation:**
   - Integrate an embedding client (e.g., HuggingFace transformers, OpenAI, or Gemini).
   - Map text chunks to vector embeddings.
-- [ ] **Add Ingestion Test Suite:**
-  - Write unit tests in `tests/test_parser.py` and `tests/test_chunker.py` to verify splitting correctness, table preservation, and embedding generation.
+- [x] **Add Ingestion Test Suite:**
+  - Write unit tests in `tests/test_parser.py`, `tests/test_chunker.py`, and `tests/test_ocr_tool.py` to verify PDF, LLM-OCR tool (with local cache), web, code parsing, boundary balancing, table preservation, deterministic chunk IDs, and parent-child association correctness.
 
 ---
 
@@ -47,4 +61,5 @@ EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
 EMBEDDING_DIMENSION: int = 384
 DEFAULT_CHUNK_SIZE: int = 500
 DEFAULT_CHUNK_OVERLAP: int = 50
+OCR_CACHE_DIR: str = ".cache/ocr"
 ```

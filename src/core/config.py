@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     COHERE_API_KEY: str = ""
 
+    # Ingestion & Embedding Configurations (Stage 1)
+    EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
+    EMBEDDING_DIMENSION: int = 384
+    DEFAULT_CHUNK_SIZE: int = 500
+    DEFAULT_CHUNK_OVERLAP: int = 50
+    OCR_CACHE_DIR: str = ".cache/ocr"
+
     # Pydantic settings configuration
     model_config = SettingsConfigDict(
         env_file=".env",
