@@ -3,6 +3,7 @@ import uuid
 from typing import List, Dict, Any, Tuple
 import tiktoken
 from core.config import settings
+from core.logger import info
 
 # Initialize tiktoken encoder
 try:
@@ -172,6 +173,7 @@ class StructureAwareChunker:
         - child_id, child_text
         - metadata
         """
+        info("chunker", f"Chunking document '{doc_id}' ({len(text)} chars)")
         blocks = self._segment_into_blocks(text)
         parents = []
         current_parent_blocks = []
@@ -233,6 +235,7 @@ class StructureAwareChunker:
                         "chunk_id": child_id
                     }
                 })
+        info("chunker", f"Produced {len(parents)} parents → {len(results)} child chunks")
         return results
 
     def _create_child_chunks(self, parent_text: str) -> List[str]:

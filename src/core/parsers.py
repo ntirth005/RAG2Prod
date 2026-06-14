@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Optional
 from html.parser import HTMLParser
 from pypdf import PdfReader
 from tools.ocr_tool import ocr_page, OCRExtractionResult
+from core.logger import info, timer_step
 
 def clean_text(text: str) -> str:
     """
@@ -84,6 +85,7 @@ async def parse_pdf_file(
     If programmatic extraction yields empty text, triggers the vision LLM-OCR tool on the page.
     Returns a list of dicts: [{"page_number": int, "text": str}]
     """
+    info("parser", f"Opening PDF: {file_path.name}")
     reader = PdfReader(file_path)
     parsed_pages = []
 

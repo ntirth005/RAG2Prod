@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional
 import httpx
 from pydantic import BaseModel, Field
 from core.config import settings
+from core.logger import info
 
 class OCRExtractionResult(BaseModel):
     markdown_content: str = Field(..., description="The parsed text, formatted in clean Markdown.")
@@ -62,6 +63,7 @@ async def ocr_page(
     cache_key = get_image_hash(image_bytes)
     cached_result = read_from_cache(cache_key)
     if cached_result is not None:
+        info("ocr", f"Cache hit for image hash {cache_key[:12]}…")
         return cached_result
 
     # Fallback to API Key from settings if not passed

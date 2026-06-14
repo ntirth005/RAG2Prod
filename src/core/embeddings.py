@@ -1,6 +1,7 @@
 import httpx
 from typing import List, Optional
 from core.config import settings
+from core.logger import info
 
 class EmbeddingClient:
     """
@@ -16,6 +17,7 @@ class EmbeddingClient:
         """Generate an embedding vector for a single text chunk."""
         if not self.api_key:
             # Fallback mock for testing (generates a deterministic float list of embedding size)
+            info("embeddings", "No API key — using mock embedding")
             return self._generate_mock_embedding(text)
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:embedContent?key={self.api_key}"
@@ -41,6 +43,7 @@ class EmbeddingClient:
         """Generate embedding vectors for a batch of text chunks."""
         # Using Gemini batch endpoint: batchEmbedContents
         if not self.api_key:
+            info("embeddings", f"No API key — using mock for {len(texts)} texts")
             return [self._generate_mock_embedding(text) for text in texts]
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:batchEmbedContents?key={self.api_key}"

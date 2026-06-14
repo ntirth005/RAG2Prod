@@ -30,6 +30,7 @@ You are assisting with the development of the **RAG2Prod** repository. To ensure
 ## Code Style & Standards
 * **Python Typing:** Use strict type hinting (`from typing import List, Dict, Optional`, etc.).
 * **Error Handling:** Always catch specific exceptions, use logging (avoid raw `print` statements), and return structured error JSON payloads from the API layer.
+* **Logging & Observability:** You MUST use the unified logging system in `src/core/logger.py` rather than standard library `logging.getLogger()`. All logs must flow through `structlog`. Use `timer_step(...)` or `pipeline(...)` context managers to automatically track task duration and execution status in both console outputs and `execution.log` files.
 * **No Placeholders:** Write complete implementations. Do not use comment placeholders (e.g., `# TODO: implement this`) in the final code blocks.
 * **Test-Driven Gating:** You MUST write corresponding unit/integration tests alongside your implementations. However, do NOT automatically run tests after every edit. Test execution is managed manually by the user, or should only be run when the user explicitly instructs you to do so, once all components are fully integrated.
 * **No Temporary Scripts:** Do NOT create temporary scratch files or utility scripts if the logic can be executed inline via Python shell commands (`python -c "..."`) or shell utilities (e.g. sed, grep). Avoid creating files just to delete them.
