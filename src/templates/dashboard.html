@@ -727,7 +727,7 @@
               <span>🔑 Chunk: ${c.chunk_id.substring(0, 8)}...</span>
             </div>
             ${c.page_number !== null ? `
-              <button class="btn-mini" style="margin-top: 0.25rem; font-weight: 600;" onclick="loadPdfViewer('${escapeHtml(c.document_id)}', ${c.page_number})">
+              <button class="btn-mini" style="margin-top: 0.25rem; font-weight: 600;" onclick="loadPdfViewer('${escapeHtml(c.document_id)}', ${c.page_number}, '${escapeHtml(c.text_snippet).replace(/'/g, "\\'")}')">
                 📖 View PDF (Page ${c.page_number})
               </button>
             ` : ''}
@@ -736,13 +736,23 @@
       `).join('');
     }
 
-    function loadPdfViewer(docId, pageNum) {
+    function loadPdfViewer(docId, pageNum, chunkText) {
       const container = document.getElementById('pdfViewerContainer');
       const iframe = document.getElementById('pdfViewerIframe');
       const title = document.getElementById('pdfViewerTitle');
       
       title.textContent = `Visual Preview — ${docId} (Page ${pageNum})`;
-      iframe.src = `/api/v1/documents/${encodeURIComponent(docId)}/file#page=${pageNum}`;
+      
+      let searchParam = "";
+      if (chunkText) {
+        const cleanText = chunkText.replace(/\s+/g, ' ').trim();
+        const searchPhrase = cleanText.split(/[.?!]+/)[0].substring(0, 35).trim();
+        if (searchPhrase.length > 3) {
+          searchParam = `&search=${encodeURIComponent('"' + searchPhrase + '"')}`;
+        }
+      }
+
+      iframe.src = `/api/v1/documents/${encodeURIComponent(docId)}/file#page=${pageNum}${searchParam}`;
       container.style.display = 'flex';
       
       if (window.innerWidth <= 1100) {
@@ -999,7 +1009,7 @@
                   <span>${highlightMatchInParent(item.parent_text, item.chunk_text)}</span>
                   ${pageNum !== null && pageNum !== undefined ? `
                     <div style="margin-top: 0.5rem;">
-                      <button class="btn-mini" style="font-weight: 600;" onclick="loadPdfViewer('${escapeHtml(item.document_id)}', ${pageNum})">
+                      <button class="btn-mini" style="font-weight: 600;" onclick="loadPdfViewer('${escapeHtml(item.document_id)}', ${pageNum}, '${escapeHtml(item.chunk_text).replace(/'/g, "\\'")}')">
                         📖 View PDF (Page ${pageNum})
                       </button>
                     </div>
