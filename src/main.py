@@ -5,7 +5,7 @@ from tempfile import NamedTemporaryFile
 from typing import Optional, Dict, Any, List
 
 from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, status
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -175,11 +175,71 @@ async def delete_document_endpoint(
         return {"status": "deleted", "document_id": doc_id}
     except HTTPException:
         raise
-    except Exception as e:
-        log_error("api", f"Delete document error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete document: {str(e)}",
+        )
+
+
+@app.get(
+    f"{settings.API_V1_STR}/documents/{{doc_id}}/file",
+    tags=["Ingestion"],
+)
+async def get_document_file(
+    doc_id: str,
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Retrieve the original PDF or text document file from object storage."""
+    try:
+        doc = await db.get(Document, doc_id)
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document with ID '{doc_id}' not found.",
+            )
+
+        storage_path_rel = doc.source_metadata.get("storage_path")
+        if not storage_path_rel:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Storage path reference not found in metadata.",
+            )
+
+        file_path = Path(storage_path_rel)
+        if not file_path.is_absolute():
+            file_path = Path(settings.OBJECT_STORAGE_LOCAL_DIR) / file_path
+
+        if not file_path.exists():
+            # Try to resolve relative to storage folder by filename only
+            file_path = Path(settings.OBJECT_STORAGE_LOCAL_DIR) / Path(storage_path_rel).name
+            if not file_path.exists():
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Physical document file not found in storage directory.",
+                )
+
+        filename = doc.source_metadata.get("filename", doc_id)
+        
+        media_type = "application/octet-stream"
+        if file_path.suffix.lower() == ".pdf":
+            media_type = "application/pdf"
+        elif file_path.suffix.lower() in (".html", ".htm"):
+            media_type = "text/html"
+        elif file_path.suffix.lower() in (".txt", ".md"):
+            media_type = "text/plain"
+
+        return FileResponse(
+            path=file_path,
+            media_type=media_type,
+            filename=filename,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_error("api", f"Fetch document file error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch document file: {str(e)}",
         )
 
 

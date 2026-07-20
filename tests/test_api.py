@@ -96,3 +96,29 @@ async def test_list_and_delete_documents_api() -> None:
         list_res_after = await async_client.get("/api/v1/documents")
         docs_after = list_res_after.json()
         assert not any(d["document_id"] == test_doc_id for d in docs_after)
+
+
+@pytest.mark.asyncio
+async def test_get_document_file_api() -> None:
+    """Verify downloading original document files via REST API."""
+    initialized = await init_db()
+    if not initialized:
+        pytest.skip("PostgreSQL database is unreachable. Skipping API integration tests.")
+
+    test_doc_id = f"doc_api_test_{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as async_client:
+        # 1. Ingest document
+        files = {"file": ("test_api_doc.txt", b"Mock document content for file retrieval testing.", "text/plain")}
+        data = {"doc_id": test_doc_id, "metadata_json": '{"tag": "download"}'}
+        ingest_res = await async_client.post("/api/v1/documents/ingest", files=files, data=data)
+        assert ingest_res.status_code == 201
+
+        # 2. Get file
+        file_res = await async_client.get(f"/api/v1/documents/{test_doc_id}/file")
+        assert file_res.status_code == 200
+        assert file_res.headers["content-type"] == "text/plain; charset=utf-8"
+        assert b"Mock document content for file retrieval testing." in file_res.content
+
+        # Clean up
+        await async_client.delete(f"/api/v1/documents/{test_doc_id}")
