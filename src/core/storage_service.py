@@ -67,6 +67,7 @@ class StorageService:
         # 2. Parse text content
         extracted_text = ""
         ext = file_path.suffix.lower()
+        pages = []
 
         if ext == ".pdf":
             pages = await parse_pdf_file(file_path)
@@ -89,7 +90,16 @@ class StorageService:
         }
 
         # 3. Structure-aware chunking
-        chunk_results = self.chunker.chunk_document(doc_id, extracted_text, doc_metadata)
+        if ext == ".pdf" and pages:
+            chunk_results = []
+            for p in pages:
+                p_text = p["text"]
+                if not p_text.strip():
+                    p_text = f"[Empty page {p['page_number']} in document {filename}]"
+                page_meta = {**doc_metadata, "page_number": p["page_number"]}
+                chunk_results.extend(self.chunker.chunk_document(doc_id, p_text, page_meta))
+        else:
+            chunk_results = self.chunker.chunk_document(doc_id, extracted_text, doc_metadata)
 
         # 4. Deduplicate parent & child chunks by deterministic ID
         parent_records: Dict[str, ParentChunk] = {}
