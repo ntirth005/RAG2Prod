@@ -122,3 +122,31 @@ async def test_get_document_file_api() -> None:
 
         # Clean up
         await async_client.delete(f"/api/v1/documents/{test_doc_id}")
+
+
+@pytest.mark.asyncio
+async def test_batch_ingest_documents_api() -> None:
+    """Verify batch ingesting multiple documents via POST /api/v1/documents/ingest/batch."""
+    initialized = await init_db()
+    if not initialized:
+        pytest.skip("PostgreSQL database is unreachable. Skipping API integration tests.")
+
+    async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as async_client:
+        files = [
+            ("files", ("batch_doc1.txt", b"First document in batch ingestion.", "text/plain")),
+            ("files", ("batch_doc2.txt", b"Second document in batch ingestion with more details.", "text/plain")),
+        ]
+        data = {"metadata_json": '{"batch": "test_run"}'}
+
+        response = await async_client.post("/api/v1/documents/ingest/batch", files=files, data=data)
+        assert response.status_code == 201
+        res_data = response.json()
+        assert res_data["total_files"] == 2
+        assert res_data["successful"] == 2
+        assert res_data["failed"] == 0
+        assert len(res_data["results"]) == 2
+
+        # Clean up created docs
+        for item in res_data["results"]:
+            await async_client.delete(f"/api/v1/documents/{item['document_id']}")
+

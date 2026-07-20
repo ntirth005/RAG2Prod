@@ -117,6 +117,15 @@ class IngestionResponse(BaseModel):
     child_chunks_count: int = Field(..., description="Number of child chunks generated and embedded.")
 
 
+class BatchIngestionResponse(BaseModel):
+    total_files: int = Field(..., description="Total number of files submitted.")
+    successful: int = Field(..., description="Number of files successfully ingested.")
+    failed: int = Field(..., description="Number of files that failed ingestion.")
+    results: List[IngestionResponse] = Field(default_factory=list, description="Ingestion responses for succeeded files.")
+    errors: List[Dict[str, str]] = Field(default_factory=list, description="Error details for failed files.")
+
+
+
 # --- Context Engineering & Generation Schemas (Stage 4 & 5) ---
 
 class SourceLocation(BaseModel):

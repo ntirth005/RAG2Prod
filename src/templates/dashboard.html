@@ -498,21 +498,22 @@
           <span>📄 Knowledge Ingestion Workspace</span>
         </div>
         <div class="form-group">
-          <label>Upload Document (PDF, TXT, MD, HTML, Python, Code)</label>
+          <label>Upload Document(s) (PDF, TXT, MD, HTML, Python, Code — Multiple Allowed)</label>
           <div class="file-dropzone" onclick="document.getElementById('fileInput').click()">
-            <p id="fileNameDisplay">Click or drag document here to upload</p>
-            <input type="file" id="fileInput" style="display:none" onchange="updateFileName()">
+            <p id="fileNameDisplay">Click or drag files here to upload (Multiple files supported)</p>
+            <input type="file" id="fileInput" multiple style="display:none" onchange="updateFileName()">
           </div>
         </div>
         <div class="form-group">
-          <label>Custom Document ID (Optional)</label>
+          <label>Custom Document ID (Optional — for single file upload)</label>
           <input type="text" id="docIdInput" placeholder="e.g. doc_report_2026">
         </div>
         <div class="form-group">
           <label>Source Metadata JSON (Optional)</label>
           <input type="text" id="metadataInput" placeholder='{"author": "Engineering", "category": "specs"}'>
         </div>
-        <button class="btn-action" onclick="submitIngest()">Ingest & Vectorize Document</button>
+        <button class="btn-action" onclick="submitIngest()">Ingest & Vectorize Document(s)</button>
+
         <div class="form-group" style="margin-top: 0.5rem; border-top: 1px solid var(--card-border); padding-top: 1rem;">
           <label>Previously Ingested Documents</label>
           <div class="doc-list" id="docList">
@@ -1220,44 +1221,72 @@
     // ── Ingestion Panel ──
     function updateFileName() {
       const input = document.getElementById('fileInput');
-      if (input.files.length > 0) {
-        document.getElementById('fileNameDisplay').innerText = `Selected: ${input.files[0].name}`;
+      if (input.files.length === 1) {
+        document.getElementById('fileNameDisplay').innerText = `Selected 1 file: ${input.files[0].name}`;
+      } else if (input.files.length > 1) {
+        const names = Array.from(input.files).map(f => f.name).join(', ');
+        document.getElementById('fileNameDisplay').innerText = `Selected ${input.files.length} files: ${names}`;
+      } else {
+        document.getElementById('fileNameDisplay').innerText = 'Click or drag files here to upload (Multiple files supported)';
       }
     }
 
     async function submitIngest() {
       const fileInput = document.getElementById('fileInput');
-      if (fileInput.files.length === 0) { alert("Please select a file to ingest."); return; }
-
-      const formData = new FormData();
-      formData.append("file", fileInput.files[0]);
-      const docId = document.getElementById('docIdInput').value.trim();
-      if (docId) formData.append("doc_id", docId);
-      const metadata = document.getElementById('metadataInput').value.trim();
-      if (metadata) formData.append("metadata_json", metadata);
+      if (fileInput.files.length === 0) { alert("Please select one or more files to ingest."); return; }
 
       const submitBtn = document.querySelector('button[onclick="submitIngest()"]');
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Vectorizing...';
 
-      try {
-        const resp = await fetch("/api/v1/documents/ingest", { method: "POST", body: formData });
-        const data = await resp.json();
-        
-        // Refresh local documents list
-        fetchDocuments();
-        
-        // Reset file input
-        fileInput.value = '';
-        document.getElementById('fileNameDisplay').innerText = 'Click or drag document here to upload';
-        alert(`Successfully ingested "${data.filename}" with ${data.child_chunks_count} vector chunks!`);
-      } catch (err) {
-        alert("Error ingesting file: " + err);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Ingest & Vectorize Document';
+      const metadata = document.getElementById('metadataInput').value.trim();
+
+      if (fileInput.files.length === 1) {
+        submitBtn.textContent = 'Vectorizing file...';
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+        const docId = document.getElementById('docIdInput').value.trim();
+        if (docId) formData.append("doc_id", docId);
+        if (metadata) formData.append("metadata_json", metadata);
+
+        try {
+          const resp = await fetch("/api/v1/documents/ingest", { method: "POST", body: formData });
+          const data = await resp.json();
+          fetchDocuments();
+          fileInput.value = '';
+          document.getElementById('fileNameDisplay').innerText = 'Click or drag files here to upload (Multiple files supported)';
+          alert(`Successfully ingested "${data.filename}" with ${data.child_chunks_count} vector chunks!`);
+        } catch (err) {
+          alert("Error ingesting file: " + err);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Ingest & Vectorize Document(s)';
+        }
+      } else {
+        submitBtn.textContent = `Vectorizing ${fileInput.files.length} files...`;
+        const formData = new FormData();
+        Array.from(fileInput.files).forEach(file => {
+          formData.append("files", file);
+        });
+        if (metadata) formData.append("metadata_json", metadata);
+
+        try {
+          const resp = await fetch("/api/v1/documents/ingest/batch", { method: "POST", body: formData });
+          const data = await resp.json();
+          fetchDocuments();
+          fileInput.value = '';
+          document.getElementById('fileNameDisplay').innerText = 'Click or drag files here to upload (Multiple files supported)';
+
+          const totalChunks = data.results.reduce((acc, r) => acc + r.child_chunks_count, 0);
+          alert(`Batch Ingestion Complete!\nSuccessfully ingested: ${data.successful}/${data.total_files} files\nGenerated ${totalChunks} vector chunks across all documents.`);
+        } catch (err) {
+          alert("Error during batch ingestion: " + err);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Ingest & Vectorize Document(s)';
+        }
       }
     }
+
 
     // ── Vector Search Panel ──
     async function submitSearch() {

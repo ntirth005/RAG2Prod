@@ -17,6 +17,7 @@ from core.generator import RAGPipeline
 from core.models import Document
 from core.schemas import (
     IngestionResponse,
+    BatchIngestionResponse,
     RetrievalQuery,
     RetrievalResult,
     QueryRequest,
@@ -113,6 +114,67 @@ async def ingest_document(
     finally:
         if 'tmp_path' in locals() and tmp_path.exists():
             tmp_path.unlink()
+
+
+@app.post(
+    f"{settings.API_V1_STR}/documents/ingest/batch",
+    response_model=BatchIngestionResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Ingestion"],
+)
+async def ingest_documents_batch(
+    files: List[UploadFile] = File(...),
+    metadata_json: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db_session),
+) -> BatchIngestionResponse:
+    """
+    Upload and ingest multiple documents concurrently in a single batch request.
+    Extracts text, creates parent-child chunks, generates embeddings, and saves all documents.
+    """
+    metadata: Dict[str, Any] = {}
+    if metadata_json:
+        try:
+            metadata = json.loads(metadata_json)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid metadata_json string: {e}",
+            )
+
+    service = StorageService(session=db)
+    results: List[IngestionResponse] = []
+    errors: List[Dict[str, str]] = []
+
+    for file in files:
+        suffix = Path(file.filename).suffix if file.filename else ".txt"
+        tmp_path = None
+        try:
+            with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                content = await file.read()
+                tmp.write(content)
+                tmp_path = Path(tmp.name)
+
+            response = await service.ingest_file(
+                file_path=tmp_path,
+                metadata=metadata,
+                original_filename=file.filename,
+            )
+            results.append(response)
+        except Exception as e:
+            log_error("api", f"Batch ingestion error for {file.filename}: {e}")
+            errors.append({"filename": file.filename or "unknown", "error": str(e)})
+        finally:
+            if tmp_path and tmp_path.exists():
+                tmp_path.unlink()
+
+    return BatchIngestionResponse(
+        total_files=len(files),
+        successful=len(results),
+        failed=len(errors),
+        results=results,
+        errors=errors,
+    )
+
 
 
 @app.get(
