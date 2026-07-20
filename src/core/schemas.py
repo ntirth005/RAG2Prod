@@ -77,3 +77,42 @@ class ValidationResult(BaseModel):
     hallucination_detected: bool = Field(..., description="True if response content contains hallucinations.")
     confidence_score: float = Field(..., description="System score reflecting certainty of response correctness.")
     requires_human_review: bool = Field(..., description="True if score requires manual routing to review queue.")
+
+
+# --- Ingestion & Retrieval API Schemas ---
+
+class MetadataFilter(BaseModel):
+    document_id: Optional[str] = Field(None, description="Filter by specific document ID.")
+    metadata_equals: Dict[str, Any] = Field(default_factory=dict, description="Key-value pairs to match in source_metadata JSONB.")
+
+
+class RetrievalQuery(BaseModel):
+    query_text: str = Field(..., description="User search query string.")
+    top_k: int = Field(5, ge=1, le=100, description="Maximum number of chunks to retrieve.")
+    score_threshold: float = Field(0.0, ge=0.0, le=1.0, description="Minimum similarity threshold (0.0 to 1.0).")
+    filter: Optional[MetadataFilter] = Field(None, description="Optional metadata filter rules.")
+
+
+class RetrievalResultItem(BaseModel):
+    chunk_id: str = Field(..., description="Child chunk identifier.")
+    parent_id: str = Field(..., description="Parent chunk identifier.")
+    document_id: str = Field(..., description="Document identifier.")
+    chunk_text: str = Field(..., description="Text of matching child chunk.")
+    parent_text: str = Field(..., description="Full text of parent chunk context.")
+    similarity_score: float = Field(..., description="Cosine similarity score (0.0 to 1.0).")
+    source_metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata dictionary.")
+
+
+class RetrievalResult(BaseModel):
+    query_text: str = Field(..., description="The queried text.")
+    total_retrieved: int = Field(..., description="Number of items returned.")
+    items: List[RetrievalResultItem] = Field(default_factory=list, description="Top matching chunk results.")
+
+
+class IngestionResponse(BaseModel):
+    document_id: str = Field(..., description="Unique document ID created or passed.")
+    filename: str = Field(..., description="Original filename.")
+    storage_path: str = Field(..., description="Path in object storage.")
+    parent_chunks_count: int = Field(..., description="Number of parent chunks generated.")
+    child_chunks_count: int = Field(..., description="Number of child chunks generated and embedded.")
+

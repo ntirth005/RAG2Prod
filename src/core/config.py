@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     DEFAULT_CHUNK_SIZE: int = 500
     DEFAULT_CHUNK_OVERLAP: int = 50
     OCR_CACHE_DIR: str = ".cache/ocr"
+    OBJECT_STORAGE_LOCAL_DIR: str = ".storage"
 
     # Pydantic settings configuration
     model_config = SettingsConfigDict(
