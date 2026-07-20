@@ -26,6 +26,9 @@ def clean_text(text: str) -> str:
     # Rejoin hyphenated words split across page breaks or newlines
     text = re.sub(r"(\w+)-\s*\n\s*(\w+)", r"\1\2", text)
     
+    # Rejoin single-letter spaced PDF kerning artifacts (e.g. 'S c h o o l' -> 'School')
+    text = re.sub(r'(?<=\b[A-Za-z]) (?=[A-Za-z]\b)', '', text)
+    
     # Standardize multiple newlines/whitespaces slightly, but preserve double-newline paragraph separation
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\r\n", "\n", text)

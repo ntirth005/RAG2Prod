@@ -12,9 +12,10 @@ def test_clean_text() -> None:
     assert clean_text("retrie-\nval") == "retrieval"
     assert clean_text("docu-\n   ment") == "document"
     
-    # Test whitespace normalization
+    # Test whitespace & kerning normalization
     assert clean_text("multiple   spaces") == "multiple spaces"
     assert clean_text("line1\r\nline2") == "line1\nline2"
+    assert clean_text("S c h o o l  o f  B a s i c  S c i e n c e s") == "School of Basic Sciences"
 
 def test_parse_html_content() -> None:
     html = """
