@@ -723,6 +723,7 @@
       const escapedParent = escapeHtml(parentText);
       const escapedChunk = escapeHtml(chunkText);
       
+      // 1. Try exact match first
       const idx = escapedParent.indexOf(escapedChunk);
       if (idx !== -1) {
         return escapedParent.substring(0, idx) + 
@@ -730,6 +731,58 @@
                escapedChunk +
                `</span>` +
                escapedParent.substring(idx + escapedChunk.length);
+      }
+
+      // 2. Fallback to soft match (normalizing whitespace)
+      try {
+        const normParent = parentText.replace(/\s+/g, ' ').toLowerCase();
+        const normChunk = chunkText.replace(/\s+/g, ' ').toLowerCase();
+        
+        const normIdx = normParent.indexOf(normChunk);
+        if (normIdx !== -1) {
+          const parentWords = parentText.split(/\s+/).filter(Boolean);
+          const chunkWords = chunkText.split(/\s+/).filter(Boolean);
+          
+          for (let i = 0; i <= parentWords.length - chunkWords.length; i++) {
+            let matches = true;
+            for (let j = 0; j < chunkWords.length; j++) {
+              if (parentWords[i + j].toLowerCase() !== chunkWords[j].toLowerCase()) {
+                matches = false;
+                break;
+              }
+            }
+            if (matches) {
+              const tokens = parentText.split(/(\s+)/);
+              let wordCount = 0;
+              let startTokenIdx = -1;
+              let endTokenIdx = -1;
+              
+              for (let t = 0; t < tokens.length; t++) {
+                if (tokens[t] && !tokens[t].match(/^\s+$/)) {
+                  if (wordCount === i) startTokenIdx = t;
+                  if (wordCount === i + chunkWords.length - 1) {
+                    endTokenIdx = t;
+                    break;
+                  }
+                  wordCount++;
+                }
+              }
+              
+              if (startTokenIdx !== -1 && endTokenIdx !== -1) {
+                const before = tokens.slice(0, startTokenIdx).map(escapeHtml).join('');
+                const match = tokens.slice(startTokenIdx, endTokenIdx + 1).map(escapeHtml).join('');
+                const after = tokens.slice(endTokenIdx + 1).map(escapeHtml).join('');
+                return before + 
+                       `<span style="background: rgba(99, 102, 241, 0.22); border-bottom: 2px dashed var(--accent-primary); padding: 0.1rem 0.2rem; border-radius: 4px; color: #ffffff; font-weight: 500;">` +
+                       match +
+                       `</span>` +
+                       after;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Fall back to simple escape
       }
       return escapedParent;
     }
