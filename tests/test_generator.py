@@ -132,6 +132,7 @@ async def test_rag_pipeline_end_to_end(MockRetriever) -> None:
     # Mock the retriever
     mock_retriever_instance = AsyncMock()
     mock_retriever_instance.search.return_value = _make_mock_retrieval_result()
+    mock_retriever_instance.search_multi.return_value = _make_mock_retrieval_result()
     MockRetriever.return_value = mock_retriever_instance
 
     mock_session = AsyncMock()
@@ -154,15 +155,17 @@ async def test_rag_pipeline_end_to_end(MockRetriever) -> None:
     assert result.retrieval_count == 2
     assert result.latency_ms > 0
     assert "deepseek" in result.model_used
+    assert result.query_trace is not None
+    assert result.query_trace.intent_class == "STATISTICAL"
 
 
 @patch("core.generator.DenseRetriever")
 async def test_rag_pipeline_no_results(MockRetriever) -> None:
     """Pipeline should return insufficient context message when no chunks found."""
     mock_retriever_instance = AsyncMock()
-    mock_retriever_instance.search.return_value = RetrievalResult(
-        query_text="unknown query", total_retrieved=0, items=[]
-    )
+    empty_result = RetrievalResult(query_text="unknown query", total_retrieved=0, items=[])
+    mock_retriever_instance.search.return_value = empty_result
+    mock_retriever_instance.search_multi.return_value = empty_result
     MockRetriever.return_value = mock_retriever_instance
 
     mock_session = AsyncMock()
@@ -175,13 +178,15 @@ async def test_rag_pipeline_no_results(MockRetriever) -> None:
     assert "do not contain sufficient information" in result.answer
     assert len(result.citations) == 0
     assert result.retrieval_count == 0
+    assert result.query_trace is not None
 
 
 @patch("core.generator.DenseRetriever")
 async def test_rag_pipeline_stream(MockRetriever) -> None:
-    """Streaming pipeline should return an async generator and context."""
+    """Streaming pipeline should return an async generator, context, model_id, and query_trace."""
     mock_retriever_instance = AsyncMock()
     mock_retriever_instance.search.return_value = _make_mock_retrieval_result()
+    mock_retriever_instance.search_multi.return_value = _make_mock_retrieval_result()
     MockRetriever.return_value = mock_retriever_instance
 
     mock_session = AsyncMock()
@@ -195,10 +200,11 @@ async def test_rag_pipeline_stream(MockRetriever) -> None:
         provider="deepseek",
     )
 
-    token_stream, context, model_id = await pipeline.run_stream(request)
+    token_stream, context, model_id, query_trace = await pipeline.run_stream(request)
 
     assert "deepseek" in model_id
     assert len(context.citations) == 2
+    assert query_trace.intent_class == "STATISTICAL"
 
     # Consume the stream
     tokens = []

@@ -74,6 +74,34 @@
     }
     .btn-api-docs:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
 
+    /* ── Query Trace Accordion ── */
+    .query-trace-box {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      font-size: 0.825rem;
+    }
+    .query-trace-header {
+      display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none;
+    }
+    .query-trace-badges { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .badge-trace {
+      padding: 0.2rem 0.5rem; border-radius: 6px; font-weight: 600; font-size: 0.75rem;
+    }
+    .badge-intent { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
+    .badge-complexity { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+    .badge-pii { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+    .query-trace-body {
+      margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .hyde-box {
+      background: rgba(0, 0, 0, 0.3); border-left: 3px solid #c084fc;
+      padding: 0.6rem 0.75rem; border-radius: 6px; font-style: italic; color: #d1d5db;
+    }
+
     /* ── Layout ── */
     .content-wrapper {
       max-width: 1400px; width: 100%; margin: 2rem auto; padding: 0 1.5rem;
@@ -324,6 +352,29 @@
         </div>
       </div>
 
+      <!-- Query Understanding Trace Accordion -->
+      <div class="query-trace-box" id="queryTraceBox" style="display: none;">
+        <div class="query-trace-header" onclick="toggleQueryTrace()">
+          <div class="query-trace-badges">
+            <span style="font-weight: 700; color: #a5b4fc;">⚡ Query Understanding:</span>
+            <span class="badge-trace badge-intent" id="traceIntent">Intent: FACTUAL</span>
+            <span class="badge-trace badge-complexity" id="traceComplexity">Complexity: SIMPLE</span>
+            <span class="badge-trace badge-pii" id="tracePII">PII: SAFE</span>
+          </div>
+          <span id="traceToggleIcon" style="color: var(--text-muted); font-size: 0.8rem;">▼ Details</span>
+        </div>
+        <div class="query-trace-body" id="queryTraceBody" style="display: none;">
+          <div><strong>Sanitized Query:</strong> <span id="traceSanitized" style="color: #e5e7eb;"></span></div>
+          <div><strong>Search Query Variations:</strong>
+            <ul id="traceVariations" style="margin-left: 1.25rem; color: #9ca3af; margin-top: 0.25rem;"></ul>
+          </div>
+          <div id="traceHyDEContainer" style="display: none;">
+            <strong>Generated HyDE Passage (Hypothetical Vector Match):</strong>
+            <div class="hyde-box" id="traceHyDEText"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Answer Area -->
       <div class="answer-container" id="answerContainer" style="display: none;">
         <div class="answer-text" id="answerText"></div>
@@ -409,6 +460,7 @@
   <script>
     // ── State ──
     let sourcesVisible = false;
+    let traceVisible = false;
     let currentCitations = [];
 
     // ── Initialize stream toggle visual ──
@@ -435,11 +487,13 @@
       const answerEl = document.getElementById('answerText');
       const metaEl = document.getElementById('answerMeta');
       const sourcesSection = document.getElementById('sourcesSection');
+      const traceBox = document.getElementById('queryTraceBox');
 
       container.style.display = 'block';
       answerEl.innerHTML = '<span class="typing-cursor"></span>';
       metaEl.style.display = 'none';
       sourcesSection.style.display = 'none';
+      traceBox.style.display = 'none';
       sourcesVisible = false;
       currentCitations = [];
 
@@ -452,16 +506,16 @@
       };
 
       if (useStream) {
-        await streamQuery(payload, answerEl, metaEl, sourcesSection);
+        await streamQuery(payload, answerEl, metaEl, sourcesSection, traceBox);
       } else {
-        await nonStreamQuery(payload, answerEl, metaEl, sourcesSection);
+        await nonStreamQuery(payload, answerEl, metaEl, sourcesSection, traceBox);
       }
 
       btn.disabled = false;
       btn.textContent = 'Ask';
     }
 
-    async function nonStreamQuery(payload, answerEl, metaEl, sourcesSection) {
+    async function nonStreamQuery(payload, answerEl, metaEl, sourcesSection, traceBox) {
       try {
         const resp = await fetch('/api/v1/query', {
           method: 'POST',
@@ -470,6 +524,7 @@
         });
         const data = await resp.json();
 
+        if (data.query_trace) renderQueryTrace(data.query_trace, traceBox);
         answerEl.innerHTML = formatAnswer(data.answer);
         currentCitations = data.citations || [];
         renderMeta(metaEl, data);
@@ -479,7 +534,7 @@
       }
     }
 
-    async function streamQuery(payload, answerEl, metaEl, sourcesSection) {
+    async function streamQuery(payload, answerEl, metaEl, sourcesSection, traceBox) {
       try {
         const resp = await fetch('/api/v1/query/stream', {
           method: 'POST',
@@ -508,7 +563,9 @@
             try {
               const event = JSON.parse(payload_str);
 
-              if (event.type === 'token') {
+              if (event.type === 'query_trace' && event.query_trace) {
+                renderQueryTrace(event.query_trace, traceBox);
+              } else if (event.type === 'token') {
                 fullAnswer += event.content;
                 answerEl.innerHTML = formatAnswer(fullAnswer) + '<span class="typing-cursor"></span>';
                 answerEl.parentElement.scrollTop = answerEl.parentElement.scrollHeight;
@@ -530,12 +587,38 @@
           }
         }
 
-        // Remove cursor after stream completes
         const cursor = answerEl.querySelector('.typing-cursor');
         if (cursor) cursor.remove();
       } catch (err) {
         answerEl.innerHTML = `<span style="color: #ef4444;">Stream error: ${err}</span>`;
       }
+    }
+
+    function renderQueryTrace(trace, traceBox) {
+      traceBox.style.display = 'block';
+      document.getElementById('traceIntent').textContent = `Intent: ${trace.intent_class}`;
+      document.getElementById('traceComplexity').textContent = `Complexity: ${trace.complexity}`;
+      document.getElementById('tracePII').textContent = `PII: ${trace.pii_safe ? 'SAFE' : 'REDACTED'}`;
+      document.getElementById('tracePII').className = `badge-trace ${trace.pii_safe ? 'badge-pii' : 'badge-complexity'}`;
+
+      document.getElementById('traceSanitized').textContent = trace.sanitized_query || '';
+      
+      const varsList = document.getElementById('traceVariations');
+      varsList.innerHTML = (trace.rewritten_queries || []).map(q => `<li>${escapeHtml(q)}</li>`).join('');
+
+      const hydeContainer = document.getElementById('traceHyDEContainer');
+      if (trace.hyde_passage) {
+        hydeContainer.style.display = 'block';
+        document.getElementById('traceHyDEText').textContent = trace.hyde_passage;
+      } else {
+        hydeContainer.style.display = 'none';
+      }
+    }
+
+    function toggleQueryTrace() {
+      traceVisible = !traceVisible;
+      document.getElementById('queryTraceBody').style.display = traceVisible ? 'flex' : 'none';
+      document.getElementById('traceToggleIcon').textContent = traceVisible ? '▲ Hide Details' : '▼ Details';
     }
 
     function formatAnswer(text) {

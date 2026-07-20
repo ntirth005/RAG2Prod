@@ -95,3 +95,60 @@ class DenseRetriever:
                 total_retrieved=len(items),
                 items=items,
             )
+
+    async def search_multi(
+        self,
+        query_texts: List[str],
+        top_k: int = 5,
+        score_threshold: float = 0.0,
+        filter_rule: Optional[MetadataFilter] = None,
+    ) -> RetrievalResult:
+        """
+        Executes vector searches for multiple query strings (e.g. rewritten/expanded queries or HyDE passage).
+        Merges and deduplicates matched chunks by chunk_id, keeping the maximum similarity score.
+        """
+        if not query_texts:
+            return RetrievalResult(query_text="", total_retrieved=0, items=[])
+
+        if len(query_texts) == 1:
+            single_q = RetrievalQuery(
+                query_text=query_texts[0],
+                top_k=top_k,
+                score_threshold=score_threshold,
+                filter=filter_rule,
+            )
+            return await self.search(single_q)
+
+        with timer_step("retriever", f"Multi-query vector search ({len(query_texts)} variations)"):
+            merged_items: Dict[str, RetrievalResultItem] = {}
+
+            for q_text in query_texts:
+                req = RetrievalQuery(
+                    query_text=q_text,
+                    top_k=top_k,
+                    score_threshold=score_threshold,
+                    filter=filter_rule,
+                )
+                res = await self.search(req)
+
+                for item in res.items:
+                    if item.chunk_id not in merged_items:
+                        merged_items[item.chunk_id] = item
+                    else:
+                        # Keep the higher similarity score across query variations
+                        if item.similarity_score > merged_items[item.chunk_id].similarity_score:
+                            merged_items[item.chunk_id] = item
+
+            # Sort merged items by similarity score descending
+            sorted_items = sorted(
+                merged_items.values(),
+                key=lambda x: x.similarity_score,
+                reverse=True,
+            )[:top_k]
+
+            info("retriever", f"Multi-query returned {len(sorted_items)} deduplicated matching chunks")
+            return RetrievalResult(
+                query_text=query_texts[0],
+                total_retrieved=len(sorted_items),
+                items=sorted_items,
+            )

@@ -147,6 +147,15 @@ class TokenUsage(BaseModel):
     total_tokens: int = Field(0, description="Total tokens consumed.")
 
 
+class QueryTrace(BaseModel):
+    intent_class: str = Field("FACTUAL", description="Classified intent class (FACTUAL, STATISTICAL, COMPARATIVE, CONCEPTUAL, etc.).")
+    complexity: QueryComplexity = Field(QueryComplexity.SIMPLE, description="Query complexity routing level (SIMPLE, MEDIUM, COMPLEX).")
+    pii_safe: bool = Field(True, description="True if no PII detected in user query.")
+    sanitized_query: str = Field("", description="Cleaned, PII-redacted query string.")
+    rewritten_queries: List[str] = Field(default_factory=list, description="Query variations generated for search.")
+    hyde_passage: Optional[str] = Field(None, description="Hypothetical document passage generated for HyDE retrieval.")
+
+
 class GenerationResult(BaseModel):
     answer: str = Field(..., description="The generated LLM answer with inline [Source N] citations.")
     citations: List[CitationSource] = Field(default_factory=list, description="Citation provenance map.")
@@ -154,6 +163,7 @@ class GenerationResult(BaseModel):
     retrieval_count: int = Field(0, description="Number of chunks retrieved from vector store.")
     latency_ms: float = Field(0.0, description="End-to-end pipeline latency in milliseconds.")
     model_used: str = Field("", description="LLM model identifier used for generation.")
+    query_trace: Optional[QueryTrace] = Field(None, description="Query understanding trace (intent, complexity, expansion, HyDE).")
 
 
 class QueryRequest(BaseModel):

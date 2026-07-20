@@ -193,18 +193,21 @@ async def query_rag_stream(
 
 async def _stream_response(pipeline: RAGPipeline, request: QueryRequest) -> StreamingResponse:
     """Build an SSE StreamingResponse from the RAG pipeline."""
-    token_stream, context, model_id = await pipeline.run_stream(request)
+    token_stream, context, model_id, query_trace = await pipeline.run_stream(request)
     start_time = time.perf_counter()
 
     async def event_generator():
         try:
+            # Emit query trace event first
+            yield f"data: {json.dumps({'type': 'query_trace', 'query_trace': query_trace.model_dump()})}\n\n"
+
             async for token in token_stream:
                 yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
 
             # Send citation summary as final event
             latency = round((time.perf_counter() - start_time) * 1000, 1)
             citations_data = [c.model_dump() for c in context.citations]
-            yield f"data: {json.dumps({'type': 'citations', 'citations': citations_data, 'model': model_id, 'latency_ms': latency})}\n\n"
+            yield f"data: {json.dumps({'type': 'citations', 'citations': citations_data, 'model': model_id, 'latency_ms': latency, 'query_trace': query_trace.model_dump()})}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as e:
             log_error("api", f"SSE stream error: {e}")

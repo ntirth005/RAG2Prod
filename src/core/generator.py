@@ -21,9 +21,11 @@ from core.schemas import (
     FormattedContext,
     PromptPayload,
     QueryRequest,
+    QueryTrace,
 )
 from core.context_builder import ContextBuilder, PromptBuilder
 from core.retriever import DenseRetriever
+from core.query_understanding import QueryUnderstandingEngine
 from core.prompts import MOCK_GENERATION_PREFIX, INSUFFICIENT_CONTEXT_RESPONSE
 from core.logger import info, error as log_error, timer_step
 
@@ -65,7 +67,7 @@ class LLMClient:
 
         config = _PROVIDER_CONFIG[provider]
         self.provider = provider
-        self.api_key = api_key or getattr(settings, config["api_key_setting"])
+        self.api_key = api_key if api_key is not None else getattr(settings, config["api_key_setting"])
         self.model_name = model_name or getattr(settings, config["model_setting"])
         self.base_url = base_url or getattr(settings, config["base_url_setting"])
         self.temperature = temperature if temperature is not None else settings.LLM_TEMPERATURE
@@ -173,7 +175,6 @@ class LLMClient:
     @staticmethod
     def _mock_response(prompt: PromptPayload) -> str:
         """Generate a mock response summarizing the context when no LLM API key is available."""
-        # Extract evidence blocks from user message
         context_section = prompt.user_message
         return f"{MOCK_GENERATION_PREFIX}{context_section}"
 
@@ -181,7 +182,7 @@ class LLMClient:
 class RAGPipeline:
     """
     End-to-end RAG pipeline orchestrator.
-    Chains: DenseRetriever → ContextBuilder → PromptBuilder → LLMClient
+    Chains: QueryUnderstandingEngine → DenseRetriever (multi-query) → ContextBuilder → PromptBuilder → LLMClient
     """
 
     def __init__(
@@ -198,22 +199,27 @@ class RAGPipeline:
     async def run(self, request: QueryRequest) -> GenerationResult:
         """
         Execute the full RAG pipeline (non-streaming):
-        1. Retrieve relevant chunks
-        2. Build context with citations
-        3. Assemble prompt
-        4. Generate answer
+        1. Query Understanding (PII, Intent/Complexity, Rewriting/Expansion/HyDE)
+        2. Multi-query vector retrieval & deduplication
+        3. Context building with citations & token truncation
+        4. Prompt assembly & LLM answer generation
         """
         start_time = time.perf_counter()
         provider = request.provider or self.provider
 
         with timer_step("pipeline", f"Full RAG pipeline for '{request.query_text[:40]}...'"):
-            # Step 1: Retrieve
-            retrieval_query = RetrievalQuery(
-                query_text=request.query_text,
+            llm = LLMClient(provider=provider)
+
+            # Step 1: Query Understanding
+            qu_engine = QueryUnderstandingEngine(llm_client=llm)
+            canonical_query, query_trace = await qu_engine.process(request.query_text)
+
+            # Step 2: Multi-query Retrieval
+            retrieval_result = await self.retriever.search_multi(
+                query_texts=query_trace.rewritten_queries,
                 top_k=request.top_k,
                 score_threshold=request.score_threshold,
             )
-            retrieval_result = await self.retriever.search(retrieval_query)
 
             if not retrieval_result.items:
                 latency = (time.perf_counter() - start_time) * 1000
@@ -224,16 +230,16 @@ class RAGPipeline:
                     retrieval_count=0,
                     latency_ms=round(latency, 1),
                     model_used=f"{provider}/none",
+                    query_trace=query_trace,
                 )
 
-            # Step 2: Build context
+            # Step 3: Build context
             context = self.context_builder.build(retrieval_result)
 
-            # Step 3: Assemble prompt
+            # Step 4: Assemble prompt
             prompt = self.prompt_builder.build(context, request.query_text)
 
-            # Step 4: Generate answer
-            llm = LLMClient(provider=provider)
+            # Step 5: Generate answer
             answer, token_usage = await llm.generate(prompt)
 
             latency = (time.perf_counter() - start_time) * 1000
@@ -245,39 +251,42 @@ class RAGPipeline:
                 retrieval_count=retrieval_result.total_retrieved,
                 latency_ms=round(latency, 1),
                 model_used=f"{provider}/{llm.model_name}",
+                query_trace=query_trace,
             )
 
-    async def run_stream(self, request: QueryRequest) -> tuple[AsyncGenerator[str, None], FormattedContext, str]:
+    async def run_stream(
+        self, request: QueryRequest
+    ) -> tuple[AsyncGenerator[str, None], FormattedContext, str, QueryTrace]:
         """
         Execute the RAG pipeline in streaming mode.
-        Returns: (token_stream, context_with_citations, model_identifier)
-
-        The caller should consume the token_stream and then use the context
-        for citation data in the final SSE event.
+        Returns: (token_stream, context_with_citations, model_identifier, query_trace)
         """
         provider = request.provider or self.provider
+        llm = LLMClient(provider=provider)
 
-        # Step 1: Retrieve
-        retrieval_query = RetrievalQuery(
-            query_text=request.query_text,
+        # Step 1: Query Understanding
+        qu_engine = QueryUnderstandingEngine(llm_client=llm)
+        canonical_query, query_trace = await qu_engine.process(request.query_text)
+
+        # Step 2: Multi-query Retrieval
+        retrieval_result = await self.retriever.search_multi(
+            query_texts=query_trace.rewritten_queries,
             top_k=request.top_k,
             score_threshold=request.score_threshold,
         )
-        retrieval_result = await self.retriever.search(retrieval_query)
 
         if not retrieval_result.items:
             async def empty_stream() -> AsyncGenerator[str, None]:
                 yield INSUFFICIENT_CONTEXT_RESPONSE
-            return empty_stream(), FormattedContext(), f"{provider}/none"
+            return empty_stream(), FormattedContext(), f"{provider}/none", query_trace
 
-        # Step 2: Build context
+        # Step 3: Build context
         context = self.context_builder.build(retrieval_result)
 
-        # Step 3: Assemble prompt
+        # Step 4: Assemble prompt
         prompt = self.prompt_builder.build(context, request.query_text)
 
-        # Step 4: Stream answer
-        llm = LLMClient(provider=provider)
+        # Step 5: Stream answer
         token_stream = llm.stream(prompt)
 
-        return token_stream, context, f"{provider}/{llm.model_name}"
+        return token_stream, context, f"{provider}/{llm.model_id if hasattr(llm, 'model_id') else llm.model_name}", query_trace

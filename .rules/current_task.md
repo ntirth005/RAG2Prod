@@ -1,31 +1,25 @@
-# Active Stage: Stage 4 & 5 — Context Engineering + Generation Layer Complete
+# Active Stage: Stage 6 — Query Understanding Complete
 
-You have completed **Milestone 2 (first half):** **Stage 4: Context Engineering** and **Stage 5: Generation Layer**.
+You have completed **Milestone 2 (second half):** **Stage 6: Query Understanding**.
 
 ---
 
-## Stage 4 & 5 Objectives
-Build the context engineering pipeline (citation indexing, token-budget truncation, prompt assembly) and generation layer (multi-provider LLM client, SSE streaming, RAG pipeline orchestrator) to transform raw vector search results into fluent, cited answers.
+## Stage 6 Objectives
+Build an intelligent Query Understanding subsystem that preprocesses incoming user queries: performs PII detection & redaction, classifies intent and complexity (`SIMPLE`, `MEDIUM`, `COMPLEX`), and dynamically applies Query Rewriting, Query Expansion, or HyDE (Hypothetical Document Embeddings) to improve retrieval accuracy.
 
 ---
 
 ## Task Checklist
-- [x] **Context Engineering Schemas:**
-  - Add `CitationSource`, `FormattedContext`, `PromptPayload`, `TokenUsage`, `GenerationResult`, `QueryRequest` to `src/core/schemas.py`.
-- [x] **Config Updates:**
-  - Add DeepSeek + OpenAI provider settings, LLM generation parameters to `src/core/config.py` and `.env`.
-- [x] **System Prompt Constants:**
-  - Create `src/core/prompts.py` with externalized RAG system prompt, context template, and fallback messages.
-- [x] **Context Builder Module:**
-  - Create `src/core/context_builder.py` with `ContextBuilder` (token truncation), `PromptBuilder` (prompt assembly), and `CitationMapper` (parent dedup + citation indexing).
-- [x] **Generator Module:**
-  - Create `src/core/generator.py` with multi-provider `LLMClient` (DeepSeek + OpenAI via OpenAI-compatible API), mock fallback, and `RAGPipeline` orchestrator.
-- [x] **REST API Endpoints:**
-  - Add `POST /api/v1/query` (JSON or SSE) and `POST /api/v1/query/stream` (dedicated SSE) to `src/main.py`.
-- [x] **Dashboard Upgrade:**
-  - Add "Ask RAG2Prod" Q&A panel with SSE streaming animation, [Source N] clickable badges, expandable source cards with highlighted text snippets, and provider toggle.
+- [x] **Schemas & Models:**
+  - Add `QueryTrace` model to `src/core/schemas.py` and link to `GenerationResult`.
+- [x] **Query Understanding Subsystem:**
+  - Create `src/core/query_understanding.py` containing `PIIDetector` (PII scanning & redaction), `IntentClassifier` (intent & complexity classification), `QueryTransformer` (Query Rewriting for SIMPLE, Query Expansion for MEDIUM, HyDE for COMPLEX), and `QueryUnderstandingEngine`.
+- [x] **Multi-Query Vector Retrieval:**
+  - Add `search_multi()` method to `DenseRetriever` in `src/core/retriever.py` to search multiple query variations and deduplicate candidate chunks by max similarity score.
+- [x] **Pipeline & Stream Integration:**
+  - Update `RAGPipeline` in `src/core/generator.py` and endpoints in `src/main.py` to transmit `query_trace` events over SSE and JSON APIs.
+- [x] **Dashboard UI Upgrade:**
+  - Add an expandable **Query Understanding Accordion & Badges** (`#queryTraceBox`) to `src/templates/dashboard.html` showing Intent, Complexity, PII status, expanded query variations, and generated HyDE passages.
 - [x] **Test Suites:**
-  - Create `tests/test_context_builder.py` (11 tests) and `tests/test_generator.py` (9 tests).
-  - All 42 tests passing across full suite.
-- [x] **Current Task Update:**
-  - Update `.rules/current_task.md` with Stage 4 & 5 checklist.
+  - Create `tests/test_query_understanding.py` (11 tests).
+  - All 53 tests passing across repository.
