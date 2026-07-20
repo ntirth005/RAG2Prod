@@ -69,13 +69,14 @@ def test_citation_mapper_deduplicates_by_parent() -> None:
 
 
 def test_citation_source_has_text_snippet() -> None:
-    """Each citation should include a text_snippet for UI highlighting."""
+    """Each citation should include a text_snippet and parent_text for UI highlighting."""
     items = _make_retrieval_items(1)
     mapper = CitationMapper(items)
     citations = mapper.build()
 
     assert citations[0].text_snippet != ""
     assert "child chunk text" in citations[0].text_snippet
+    assert "full parent text" in citations[0].parent_text
 
 
 def test_citation_source_page_number() -> None:

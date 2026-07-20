@@ -56,10 +56,8 @@ class CitationMapper:
             seen_parents[item.parent_id] = citation_index
             page_number = item.source_metadata.get("page_number")
 
-            # Build a short snippet for UI highlighting (first 200 chars of chunk text)
-            snippet = item.chunk_text[:200].strip()
-            if len(item.chunk_text) > 200:
-                snippet += "..."
+            # Set the full chunk_text as snippet for high-fidelity frontend highlighting
+            snippet = item.chunk_text
 
             citations.append(
                 CitationSource(
@@ -69,6 +67,7 @@ class CitationMapper:
                     page_number=int(page_number) if page_number is not None else None,
                     similarity_score=item.similarity_score,
                     text_snippet=snippet,
+                    parent_text=item.parent_text or item.chunk_text,
                 )
             )
             citation_index += 1

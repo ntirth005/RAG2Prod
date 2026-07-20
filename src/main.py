@@ -2,23 +2,26 @@ import json
 import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, status
 from fastapi.responses import HTMLResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from core.config import settings
 from core.database import get_db_session
 from core.storage_service import StorageService
 from core.retriever import DenseRetriever
 from core.generator import RAGPipeline
+from core.models import Document
 from core.schemas import (
     IngestionResponse,
     RetrievalQuery,
     RetrievalResult,
     QueryRequest,
     GenerationResult,
+    DocumentItem,
 )
 from core.logger import info, error as log_error
 
@@ -110,6 +113,74 @@ async def ingest_document(
     finally:
         if 'tmp_path' in locals() and tmp_path.exists():
             tmp_path.unlink()
+
+
+@app.get(
+    f"{settings.API_V1_STR}/documents",
+    response_model=List[DocumentItem],
+    status_code=status.HTTP_200_OK,
+    tags=["Ingestion"],
+)
+async def list_documents(
+    db: AsyncSession = Depends(get_db_session),
+) -> List[DocumentItem]:
+    """Retrieve all previously ingested documents from the database."""
+    try:
+        stmt = select(Document).order_by(Document.created_at.desc())
+        result = await db.execute(stmt)
+        docs = result.scalars().all()
+        
+        items = []
+        for doc in docs:
+            filename = doc.source_metadata.get("filename", doc.id)
+            storage_path = doc.source_metadata.get("storage_path")
+            pub_meta = {k: v for k, v in doc.source_metadata.items() if k not in ("filename", "storage_path")}
+            
+            items.append(
+                DocumentItem(
+                    document_id=doc.id,
+                    filename=filename,
+                    created_at=doc.created_at.isoformat(),
+                    storage_path=storage_path,
+                    metadata=pub_meta,
+                )
+            )
+        return items
+    except Exception as e:
+        log_error("api", f"List documents error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list documents: {str(e)}",
+        )
+
+
+@app.delete(
+    f"{settings.API_V1_STR}/documents/{{doc_id}}",
+    status_code=status.HTTP_200_OK,
+    tags=["Ingestion"],
+)
+async def delete_document_endpoint(
+    doc_id: str,
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Delete a document, its file, and all associated parent/child chunks cascadingly."""
+    try:
+        service = StorageService(session=db)
+        success = await service.delete_document(doc_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document with ID '{doc_id}' not found.",
+            )
+        return {"status": "deleted", "document_id": doc_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_error("api", f"Delete document error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete document: {str(e)}",
+        )
 
 
 @app.post(

@@ -298,6 +298,32 @@
       padding: 2rem; color: var(--text-muted); text-align: center; gap: 0.5rem;
     }
     .empty-state-icon { font-size: 2rem; opacity: 0.5; }
+    /* ── Document Management ── */
+    .doc-list {
+      display: flex; flex-direction: column; gap: 0.5rem;
+      max-height: 180px; overflow-y: auto; margin-top: 0.5rem;
+      padding-right: 0.25rem;
+    }
+    .doc-item-row {
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(255, 255, 255, 0.03); border: 1px solid var(--card-border);
+      border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+    .doc-item-row:hover {
+      background: rgba(255, 255, 255, 0.06); border-color: rgba(99, 102, 241, 0.3);
+    }
+    .doc-item-info { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+    .doc-item-name { font-weight: 600; color: #f3f4f6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .doc-item-id { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent-cyan); }
+    .doc-item-actions { display: flex; gap: 0.4rem; }
+    .btn-mini {
+      background: rgba(255, 255, 255, 0.06); border: 1px solid var(--card-border);
+      color: var(--text-main); border-radius: 6px; padding: 0.25rem 0.5rem;
+      font-size: 0.7rem; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-mini:hover { background: rgba(99, 102, 241, 0.2); border-color: var(--accent-primary); }
+    .btn-mini.btn-delete:hover { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #f87171; }
   </style>
 </head>
 <body>
@@ -415,9 +441,11 @@
           <input type="text" id="metadataInput" placeholder='{"author": "Engineering", "category": "specs"}'>
         </div>
         <button class="btn-action" onclick="submitIngest()">Ingest & Vectorize Document</button>
-        <div class="form-group" id="ingestResultGroup" style="display:none;">
-          <label>Ingestion Response</label>
-          <div class="result-box" id="ingestResultBox"></div>
+        <div class="form-group" style="margin-top: 0.5rem; border-top: 1px solid var(--card-border); padding-top: 1rem;">
+          <label>Previously Ingested Documents</label>
+          <div class="doc-list" id="docList">
+            <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center;">Loading documents...</p>
+          </div>
         </div>
       </section>
 
@@ -468,6 +496,7 @@
       const slider = document.getElementById('qaStreamSlider');
       const toggle = document.getElementById('qaStreamToggle');
       if (toggle.checked) slider.style.background = 'var(--accent-primary)';
+      fetchDocuments();
     });
 
     // ── Q&A Panel ──
@@ -655,7 +684,7 @@
             <span class="source-index">[Source ${c.index}]</span>
             <span class="source-score">${(c.similarity_score * 100).toFixed(1)}% match</span>
           </div>
-          <div class="source-snippet">${escapeHtml(c.text_snippet)}</div>
+          <div class="source-snippet">${highlightMatchInParent(c.parent_text, c.text_snippet)}</div>
           <div class="source-meta">
             <span>📄 Doc: ${c.document_id.substring(0, 20)}${c.document_id.length > 20 ? '...' : ''}</span>
             ${c.page_number !== null ? `<span>📃 Page ${c.page_number}</span>` : ''}
@@ -688,6 +717,88 @@
       return div.innerHTML;
     }
 
+    function highlightMatchInParent(parentText, chunkText) {
+      if (!chunkText || !parentText) return escapeHtml(parentText || chunkText || "");
+      
+      const escapedParent = escapeHtml(parentText);
+      const escapedChunk = escapeHtml(chunkText);
+      
+      const idx = escapedParent.indexOf(escapedChunk);
+      if (idx !== -1) {
+        return escapedParent.substring(0, idx) + 
+               `<span style="background: rgba(99, 102, 241, 0.22); border-bottom: 2px dashed var(--accent-primary); padding: 0.1rem 0.2rem; border-radius: 4px; color: #ffffff; font-weight: 500;">` +
+               escapedChunk +
+               `</span>` +
+               escapedParent.substring(idx + escapedChunk.length);
+      }
+      return escapedParent;
+    }
+
+    // ── Document Management ──
+    async function fetchDocuments() {
+      const docList = document.getElementById('docList');
+      try {
+        const resp = await fetch('/api/v1/documents');
+        const docs = await resp.json();
+        
+        if (docs.length > 0) {
+          docList.innerHTML = docs.map(doc => `
+            <div class="doc-item-row" id="doc-row-${doc.document_id}">
+              <div class="doc-item-info">
+                <span class="doc-item-name" title="${escapeHtml(doc.filename)}">${escapeHtml(doc.filename)}</span>
+                <span class="doc-item-id">ID: ${escapeHtml(doc.document_id)}</span>
+              </div>
+              <div class="doc-item-actions">
+                <button class="btn-mini" onclick="selectDocForFilter('${escapeHtml(doc.document_id)}')">Reuse</button>
+                <button class="btn-mini btn-delete" onclick="deleteDoc('${escapeHtml(doc.document_id)}')">Delete</button>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          docList.innerHTML = '<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center;">No documents ingested yet.</p>';
+        }
+      } catch (err) {
+        docList.innerHTML = `<p style="color: #ef4444; font-size: 0.8rem; text-align: center;">Error: ${err}</p>`;
+      }
+    }
+
+    function selectDocForFilter(docId) {
+      document.getElementById('docIdInput').value = docId;
+      document.getElementById('filterDocId').value = docId;
+      
+      // Flash the background of the target input fields to show visual feedback
+      const docIdInput = document.getElementById('docIdInput');
+      const filterDocId = document.getElementById('filterDocId');
+      
+      [docIdInput, filterDocId].forEach(el => {
+        el.style.borderColor = 'var(--accent-primary)';
+        el.style.boxShadow = '0 0 10px var(--accent-glow)';
+        setTimeout(() => {
+          el.style.borderColor = '';
+          el.style.boxShadow = '';
+        }, 1500);
+      });
+    }
+
+    async function deleteDoc(docId) {
+      if (!confirm(`Are you sure you want to delete document "${docId}" and all its chunk data?`)) return;
+      
+      const row = document.getElementById(`doc-row-${docId}`);
+      if (row) row.style.opacity = 0.5;
+
+      try {
+        const resp = await fetch(`/api/v1/documents/${docId}`, { method: 'DELETE' });
+        if (resp.ok) {
+          fetchDocuments();
+        } else {
+          alert('Failed to delete document');
+        }
+      } catch (err) {
+        alert('Error deleting document: ' + err);
+        fetchDocuments();
+      }
+    }
+
     // ── Ingestion Panel ──
     function updateFileName() {
       const input = document.getElementById('fileInput');
@@ -707,16 +818,26 @@
       const metadata = document.getElementById('metadataInput').value.trim();
       if (metadata) formData.append("metadata_json", metadata);
 
-      const resBox = document.getElementById('ingestResultBox');
-      document.getElementById('ingestResultGroup').style.display = "block";
-      resBox.innerText = "Ingesting, chunking, and generating vector embeddings...";
+      const submitBtn = document.querySelector('button[onclick="submitIngest()"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Vectorizing...';
 
       try {
         const resp = await fetch("/api/v1/documents/ingest", { method: "POST", body: formData });
         const data = await resp.json();
-        resBox.innerText = JSON.stringify(data, null, 2);
+        
+        // Refresh local documents list
+        fetchDocuments();
+        
+        // Reset file input
+        fileInput.value = '';
+        document.getElementById('fileNameDisplay').innerText = 'Click or drag document here to upload';
+        alert(`Successfully ingested "${data.filename}" with ${data.child_chunks_count} vector chunks!`);
       } catch (err) {
-        resBox.innerText = "Error ingesting file: " + err;
+        alert("Error ingesting file: " + err);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Ingest & Vectorize Document';
       }
     }
 
@@ -757,7 +878,7 @@
               <p style="font-size: 0.875rem; color: #e5e7eb;">${escapeHtml(item.chunk_text)}</p>
               <div class="parent-accordion">
                 <strong>Parent Context (${item.parent_id.substring(0, 8)}...):</strong><br>
-                <span>${escapeHtml(item.parent_text)}</span>
+                <span>${highlightMatchInParent(item.parent_text, item.chunk_text)}</span>
               </div>
             </div>
           `).join('');

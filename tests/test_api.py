@@ -58,3 +58,41 @@ async def test_ingest_and_search_api_flow() -> None:
         search_data = search_res.json()
         assert search_data["total_retrieved"] > 0
         assert search_data["items"][0]["document_id"] == test_doc_id
+
+
+@pytest.mark.asyncio
+async def test_list_and_delete_documents_api() -> None:
+    """Verify listing and deleting documents via REST API."""
+    initialized = await init_db()
+    if not initialized:
+        pytest.skip("PostgreSQL database is unreachable. Skipping API integration tests.")
+
+    test_doc_id = f"doc_api_test_{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as async_client:
+        # 1. Ingest document
+        files = {"file": ("test_api_doc.txt", b"Mock document content for list and delete testing.", "text/plain")}
+        data = {"doc_id": test_doc_id, "metadata_json": '{"tag": "temp"}'}
+        ingest_res = await async_client.post("/api/v1/documents/ingest", files=files, data=data)
+        assert ingest_res.status_code == 201
+
+        # 2. List documents
+        list_res = await async_client.get("/api/v1/documents")
+        assert list_res.status_code == 200
+        docs = list_res.json()
+        assert len(docs) > 0
+        
+        # Verify our document is in the list
+        matched_doc = next((d for d in docs if d["document_id"] == test_doc_id), None)
+        assert matched_doc is not None
+        assert matched_doc["filename"] == "test_api_doc.txt"
+
+        # 3. Delete document
+        del_res = await async_client.delete(f"/api/v1/documents/{test_doc_id}")
+        assert del_res.status_code == 200
+        assert del_res.json()["status"] == "deleted"
+
+        # Verify it's gone
+        list_res_after = await async_client.get("/api/v1/documents")
+        docs_after = list_res_after.json()
+        assert not any(d["document_id"] == test_doc_id for d in docs_after)

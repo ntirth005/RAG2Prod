@@ -126,6 +126,7 @@ class CitationSource(BaseModel):
     page_number: Optional[int] = Field(None, description="Page number in source document, if available.")
     similarity_score: float = Field(..., description="Cosine similarity score of this source.")
     text_snippet: str = Field("", description="Short snippet of the source text for UI highlighting.")
+    parent_text: str = Field("", description="The full parent chunk context text.")
 
 
 class FormattedContext(BaseModel):
@@ -172,4 +173,12 @@ class QueryRequest(BaseModel):
     score_threshold: float = Field(0.0, ge=0.0, le=1.0, description="Minimum similarity score threshold.")
     stream: bool = Field(False, description="If true, response is streamed via SSE.")
     provider: str = Field("deepseek", description="LLM provider: 'deepseek' or 'openai'.")
+
+
+class DocumentItem(BaseModel):
+    document_id: str = Field(..., description="The unique document identifier.")
+    filename: str = Field(..., description="The original filename of the document.")
+    created_at: str = Field(..., description="ISO formatted creation timestamp.")
+    storage_path: Optional[str] = Field(None, description="Path where the original document is stored.")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata key-values associated with the document.")
 
