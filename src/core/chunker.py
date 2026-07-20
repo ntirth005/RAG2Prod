@@ -1,11 +1,13 @@
 import re
 import uuid
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import tiktoken
 from core.config import settings
 from core.logger import info
+from core.parsers import compute_offsets
 
 # Initialize tiktoken encoder
+
 try:
     _encoder = tiktoken.get_encoding("cl100k_base")
 except Exception:
@@ -164,14 +166,15 @@ class StructureAwareChunker:
         self, 
         doc_id: str, 
         text: str, 
-        metadata: dict
+        metadata: dict,
+        raw_text: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Chunks the document into Parent-Child mappings.
         Returns a list of chunk dictionaries containing:
         - parent_id, parent_text
         - child_id, child_text
-        - metadata
+        - metadata (including start_char, end_char, start_line, end_line, etc.)
         """
         info("chunker", f"Chunking document '{doc_id}' ({len(text)} chars)")
         blocks = self._segment_into_blocks(text)
@@ -214,29 +217,64 @@ class StructureAwareChunker:
             parents.append("\n\n".join([b["text"] for b in current_parent_blocks]))
 
         results = []
+        parent_search_cursor = 0
+
         for parent_text in parents:
             parent_id = generate_chunk_id(doc_id, parent_text)
-            
+
+            p_start, p_end, p_sline, p_eline = compute_offsets(text, parent_text, search_from=parent_search_cursor)
+            parent_search_cursor = p_start
+
+            p_raw_start, p_raw_end, p_raw_sline, p_raw_eline = (
+                compute_offsets(raw_text, parent_text, search_from=parent_search_cursor)
+                if raw_text else (p_start, p_end, p_sline, p_eline)
+            )
+
             # Split parent text into child chunks
             child_texts = self._create_child_chunks(parent_text)
-            
+
+            child_search_cursor = p_start
             for child_text in child_texts:
                 child_id = generate_chunk_id(doc_id, child_text)
-                
+
+                c_start, c_end, c_sline, c_eline = compute_offsets(text, child_text, search_from=child_search_cursor)
+                child_search_cursor = c_start
+
+                c_raw_start, c_raw_end, c_raw_sline, c_raw_eline = (
+                    compute_offsets(raw_text, child_text, search_from=child_search_cursor)
+                    if raw_text else (c_start, c_end, c_sline, c_eline)
+                )
+
+                chunk_meta = {
+                    **metadata,
+                    "parent_id": parent_id,
+                    "chunk_id": child_id,
+                    "start_char": c_start,
+                    "end_char": c_end,
+                    "start_line": c_sline,
+                    "end_line": c_eline,
+                    "raw_start_char": c_raw_start,
+                    "raw_end_char": c_raw_end,
+                    "raw_start_line": c_raw_sline,
+                    "raw_end_line": c_raw_eline,
+                    "parent_start_char": p_start,
+                    "parent_end_char": p_end,
+                    "parent_start_line": p_sline,
+                    "parent_end_line": p_eline,
+                }
+
                 results.append({
                     "document_id": doc_id,
                     "parent_id": parent_id,
                     "parent_text": parent_text,
                     "chunk_id": child_id,
                     "text": child_text,
-                    "metadata": {
-                        **metadata,
-                        "parent_id": parent_id,
-                        "chunk_id": child_id
-                    }
+                    "metadata": chunk_meta
                 })
+
         info("chunker", f"Produced {len(parents)} parents → {len(results)} child chunks")
         return results
+
 
     def _create_child_chunks(self, parent_text: str) -> List[str]:
         """

@@ -14,6 +14,7 @@ from core.schemas import (
     RetrievalResult,
     RetrievalResultItem,
     CitationSource,
+    SourceLocation,
     FormattedContext,
     PromptPayload,
 )
@@ -54,10 +55,25 @@ class CitationMapper:
                 continue
 
             seen_parents[item.parent_id] = citation_index
-            page_number = item.source_metadata.get("page_number")
+            meta = item.source_metadata or {}
+            page_number = meta.get("page_number")
+            file_type = meta.get("file_type", ".txt")
 
             # Set the full chunk_text as snippet for high-fidelity frontend highlighting
             snippet = item.chunk_text
+
+            loc = None
+            if any(k in meta for k in ("start_char", "raw_start_char", "start_line")):
+                loc = SourceLocation(
+                    start_char=meta.get("start_char"),
+                    end_char=meta.get("end_char"),
+                    raw_start_char=meta.get("raw_start_char"),
+                    raw_end_char=meta.get("raw_end_char"),
+                    start_line=meta.get("start_line"),
+                    end_line=meta.get("end_line"),
+                    bbox=meta.get("bbox"),
+                    dom_selector=meta.get("dom_selector"),
+                )
 
             citations.append(
                 CitationSource(
@@ -65,14 +81,17 @@ class CitationMapper:
                     document_id=item.document_id,
                     chunk_id=item.chunk_id,
                     page_number=int(page_number) if page_number is not None else None,
+                    file_type=file_type,
                     similarity_score=item.similarity_score,
                     text_snippet=snippet,
                     parent_text=item.parent_text or item.chunk_text,
+                    location=loc,
                 )
             )
             citation_index += 1
 
         return citations
+
 
 
 class ContextBuilder:

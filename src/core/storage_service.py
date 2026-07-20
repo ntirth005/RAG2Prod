@@ -94,12 +94,19 @@ class StorageService:
             chunk_results = []
             for p in pages:
                 p_text = p["text"]
+                p_raw = p.get("raw_text", p_text)
                 if not p_text.strip():
                     p_text = f"[Empty page {p['page_number']} in document {filename}]"
                 page_meta = {**doc_metadata, "page_number": p["page_number"]}
-                chunk_results.extend(self.chunker.chunk_document(doc_id, p_text, page_meta))
+                chunk_results.extend(self.chunker.chunk_document(doc_id, p_text, page_meta, raw_text=p_raw))
+        elif ext in {".html", ".htm"}:
+            raw_content = file_path.read_text(encoding="utf-8", errors="ignore")
+            extracted_text = parse_html_content(raw_content)
+            chunk_results = self.chunker.chunk_document(doc_id, extracted_text, doc_metadata, raw_text=raw_content)
         else:
-            chunk_results = self.chunker.chunk_document(doc_id, extracted_text, doc_metadata)
+            raw_content = file_path.read_text(encoding="utf-8", errors="ignore")
+            extracted_text = parse_text_content(raw_content)
+            chunk_results = self.chunker.chunk_document(doc_id, extracted_text, doc_metadata, raw_text=raw_content)
 
         # 4. Deduplicate parent & child chunks by deterministic ID
         parent_records: Dict[str, ParentChunk] = {}
@@ -111,16 +118,24 @@ class StorageService:
             c_id = c_info["chunk_id"]
 
             if p_id not in parent_records:
+                parent_meta = {
+                    **c_info["metadata"],
+                    "start_char": c_info["metadata"].get("parent_start_char"),
+                    "end_char": c_info["metadata"].get("parent_end_char"),
+                    "start_line": c_info["metadata"].get("parent_start_line"),
+                    "end_line": c_info["metadata"].get("parent_end_line"),
+                }
                 parent_records[p_id] = ParentChunk(
                     id=p_id,
                     document_id=doc_id,
                     text=c_info["parent_text"],
-                    source_metadata=c_info["metadata"],
+                    source_metadata=parent_meta,
                 )
 
             if c_id not in unique_child_ids:
                 unique_child_ids.add(c_id)
                 unique_child_info.append(c_info)
+
 
         # 5. Generate embeddings ONLY for unique child chunks (saving API/computation costs)
         child_texts = [c["text"] for c in unique_child_info]

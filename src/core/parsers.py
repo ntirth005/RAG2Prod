@@ -1,7 +1,7 @@
 import re
 import unicodedata
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from html.parser import HTMLParser
 from pypdf import PdfReader
 from tools.ocr_tool import ocr_page, OCRExtractionResult
@@ -124,7 +124,45 @@ async def parse_pdf_file(
 
         parsed_pages.append({
             "page_number": page_num,
-            "text": text
+            "text": text,
+            "raw_text": page.extract_text() or text
         })
 
     return parsed_pages
+
+
+def compute_offsets(
+    full_text: str,
+    snippet: str,
+    search_from: int = 0
+) -> Tuple[int, int, int, int]:
+    """
+    Computes (start_char, end_char, start_line, end_line) of snippet within full_text starting from search_from.
+    Lines are 1-indexed.
+    """
+    if not snippet or not full_text:
+        return 0, 0, 1, 1
+
+    start_idx = full_text.find(snippet, search_from)
+    if start_idx == -1:
+        start_idx = full_text.find(snippet)
+
+    if start_idx == -1:
+        # Fuzzy fallback: match leading 30 characters
+        short_prefix = snippet[:30].strip()
+        if short_prefix:
+            start_idx = full_text.find(short_prefix, search_from)
+            if start_idx == -1:
+                start_idx = full_text.find(short_prefix)
+
+    if start_idx == -1:
+        start_idx = min(search_from, len(full_text))
+        end_idx = min(start_idx + len(snippet), len(full_text))
+    else:
+        end_idx = min(start_idx + len(snippet), len(full_text))
+
+    start_line = 1 + full_text.count("\n", 0, start_idx)
+    end_line = 1 + full_text.count("\n", 0, end_idx)
+
+    return start_idx, end_idx, start_line, end_line
+

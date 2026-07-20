@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
   <style>
     :root {
       --bg-dark: #0b0f19;
@@ -111,7 +113,7 @@
       flex: 1; display: flex; flex-direction: column; gap: 1.5rem; min-width: 0;
     }
     .right-viewer {
-      width: 580px; height: 85vh; position: sticky; top: 90px;
+      width: 640px; height: 85vh; position: sticky; top: 90px;
       background: var(--card-bg); backdrop-filter: blur(16px);
       border: 1px solid var(--card-border); border-radius: 16px;
       display: none; flex-direction: column; overflow: hidden;
@@ -125,7 +127,52 @@
     .right-viewer-title { font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 600; color: #fff; }
     .right-viewer-close { cursor: pointer; color: var(--text-muted); font-weight: bold; font-size: 1.2rem; transition: color 0.15s; }
     .right-viewer-close:hover { color: #f87171; }
-    .pdf-frame { width: 100%; height: 100%; border: none; background: #f3f4f6; }
+    
+    /* Dynamic Highlighting Styles */
+    .dynamic-highlight {
+      background: rgba(251, 191, 36, 0.35);
+      border-bottom: 2px solid #fbbf24;
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.5);
+      border-radius: 4px;
+      padding: 0.1rem 0.25rem;
+      color: #ffffff;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .pdf-highlight-box {
+      position: absolute;
+      background: rgba(251, 191, 36, 0.45);
+      border: 2px solid #fbbf24;
+      box-shadow: 0 0 16px rgba(251, 191, 36, 0.6);
+      border-radius: 4px;
+      pointer-events: none;
+      transition: all 0.3s ease-in-out;
+      z-index: 20;
+    }
+    .text-line-row {
+      display: flex;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .text-line-row:hover { background: rgba(255, 255, 255, 0.03); }
+    .text-line-num {
+      width: 45px;
+      color: var(--text-muted);
+      user-select: none;
+      text-align: right;
+      padding-right: 1rem;
+      opacity: 0.6;
+    }
+    .text-line-content {
+      flex: 1;
+      white-space: pre-wrap;
+    }
+    .text-line-row.highlighted {
+      background: rgba(99, 102, 241, 0.28);
+      border-left: 3px solid var(--accent-primary);
+    }
+
 
     .bottom-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
@@ -510,14 +557,40 @@
     </div>
   </div>
 
-  <!-- ═══════════ Embedded PDF Viewer (Right Split Pane) ═══════════ -->
-  <section class="right-viewer" id="pdfViewerContainer">
+  <!-- ═══════════ Unified Multi-Format Document Viewer (Right Split Pane) ═══════════ -->
+  <section class="right-viewer" id="docViewerContainer">
     <div class="right-viewer-header">
-      <span class="right-viewer-title" id="pdfViewerTitle">PDF Visual Preview</span>
-      <span class="right-viewer-close" onclick="closePdfViewer()">✕</span>
+      <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0;">
+        <span class="right-viewer-title" id="docViewerTitle">Source Document Viewer</span>
+        <span id="docViewerBadge" class="badge-stage" style="font-size: 0.7rem;">PDF</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div id="pdfControls" style="display: none; align-items: center; gap: 0.35rem;">
+          <button class="btn-mini" onclick="changePdfPage(-1)">◀ Prev</button>
+          <span id="pdfPageNum" style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; color: var(--accent-cyan);">1 / 1</span>
+          <button class="btn-mini" onclick="changePdfPage(1)">Next ▶</button>
+        </div>
+        <span class="right-viewer-close" onclick="closeDocViewer()">✕</span>
+      </div>
     </div>
-    <iframe class="pdf-frame" id="pdfViewerIframe" src="about:blank"></iframe>
+    <div class="viewer-content-area" id="viewerContentArea" style="flex: 1; overflow: auto; position: relative; padding: 1.25rem;">
+      <!-- PDF Render Area -->
+      <div id="pdfView" style="display: none; text-align: center;">
+        <div id="pdfPageWrapper" style="position: relative; display: inline-block; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border-radius: 8px; overflow: hidden; background: #ffffff;">
+          <canvas id="pdfCanvas"></canvas>
+          <div id="pdfTextLayer" class="textLayer" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; opacity: 0.2; pointer-events: none;"></div>
+          <div id="pdfHighlightOverlay" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20;"></div>
+        </div>
+      </div>
+
+      <!-- HTML Render Area -->
+      <div id="htmlView" style="display: none; color: #e5e7eb; line-height: 1.6; font-size: 0.9rem;"></div>
+
+      <!-- Text / Code Render Area -->
+      <div id="textView" style="display: none; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 1.5; color: #f3f4f6;"></div>
+    </div>
   </section>
+
 </div>
 
   <script>
@@ -688,8 +761,8 @@
     function formatAnswer(text) {
       // Escape HTML
       let safe = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      // Highlight [Source N] references as clickable badges
-      safe = safe.replace(/\[Source (\d+)\]/g, '<span class="source-ref" onclick="scrollToSource($1)">[Source $1]</span>');
+      // Highlight [Source N] references as clickable badges that open viewer
+      safe = safe.replace(/\[Source (\d+)\]/g, '<span class="source-ref" onclick="openCitationViewer($1)">[Source $1]</span>');
       // Basic markdown-like formatting
       safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
       safe = safe.replace(/\n/g, '<br>');
@@ -716,6 +789,8 @@
       const grid = document.getElementById('sourcesGrid');
       grid.innerHTML = citations.map(c => {
         window.citationTexts[c.index] = c.text_snippet;
+        const extLabel = (c.file_type || 'doc').replace('.', '').toUpperCase();
+        const pageLabel = c.page_number !== null && c.page_number !== undefined ? `<span>📃 Page ${c.page_number}</span>` : '';
         return `
           <div class="source-card" id="source-card-${c.index}">
             <div class="source-card-header">
@@ -724,51 +799,264 @@
             </div>
             <div class="source-snippet">${highlightMatchInParent(c.parent_text, c.text_snippet)}</div>
             <div class="source-meta" style="flex-direction: column; align-items: flex-start; gap: 0.4rem;">
-              <div style="display: flex; gap: 0.75rem;">
-                <span>📄 Doc: ${c.document_id.substring(0, 20)}${c.document_id.length > 20 ? '...' : ''}</span>
-                ${c.page_number !== null ? `<span>📃 Page ${c.page_number}</span>` : ''}
-                <span>🔑 Chunk: ${c.chunk_id.substring(0, 8)}...</span>
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <span>📄 Doc: ${c.document_id.substring(0, 16)}... (${extLabel})</span>
+                ${pageLabel}
               </div>
-              ${c.page_number !== null ? `
-                <button class="btn-mini" style="margin-top: 0.25rem; font-weight: 600;" onclick="loadPdfViewer('${escapeHtml(c.document_id)}', ${c.page_number}, window.citationTexts[${c.index}])">
-                  📖 View PDF (Page ${c.page_number})
-                </button>
-              ` : ''}
+              <button class="btn-mini" style="margin-top: 0.25rem; font-weight: 600;" onclick="openCitationViewer(${c.index})">
+                📖 View Source Highlight (${extLabel})
+              </button>
             </div>
           </div>
         `;
       }).join('');
     }
 
-    function loadPdfViewer(docId, pageNum, chunkText) {
-      const container = document.getElementById('pdfViewerContainer');
-      const iframe = document.getElementById('pdfViewerIframe');
-      const title = document.getElementById('pdfViewerTitle');
-      
-      title.textContent = `Visual Preview — ${docId} (Page ${pageNum})`;
-      
-      let searchParam = "";
-      if (chunkText) {
-        const cleanText = chunkText.replace(/\s+/g, ' ').trim();
-        const searchPhrase = cleanText.split(/[.?!]+/)[0].substring(0, 35).trim();
-        if (searchPhrase.length > 3) {
-          searchParam = `&search=${encodeURIComponent('"' + searchPhrase + '"')}`;
-        }
-      }
+    // ── PDF.js & Unified Multi-Format Source Viewer ──
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
 
-      iframe.src = `/api/v1/documents/${encodeURIComponent(docId)}/file#page=${pageNum}${searchParam}`;
-      container.style.display = 'flex';
-      
-      if (window.innerWidth <= 1100) {
-        container.scrollIntoView({ behavior: 'smooth' });
+    let pdfDoc = null;
+    let currentPdfPageNum = 1;
+    let activeCitation = null;
+
+    function openCitationViewer(index) {
+      const citation = currentCitations.find(c => c.index === index);
+      if (citation) {
+        openSourceViewer(citation);
+      } else {
+        scrollToSource(index);
       }
     }
 
-    function closePdfViewer() {
-      const container = document.getElementById('pdfViewerContainer');
-      const iframe = document.getElementById('pdfViewerIframe');
-      iframe.src = 'about:blank';
+    async function openSourceViewer(citation) {
+      activeCitation = citation;
+      const container = document.getElementById('docViewerContainer');
+      const title = document.getElementById('docViewerTitle');
+      const badge = document.getElementById('docViewerBadge');
+      const pdfControls = document.getElementById('pdfControls');
+      
+      const pdfView = document.getElementById('pdfView');
+      const htmlView = document.getElementById('htmlView');
+      const textView = document.getElementById('textView');
+      
+      pdfView.style.display = 'none';
+      htmlView.style.display = 'none';
+      textView.style.display = 'none';
+      pdfControls.style.display = 'none';
+
+      const ext = (citation.file_type || '').toLowerCase();
+      const isPdf = ext === '.pdf' || citation.page_number !== null;
+      const isHtml = ext === '.html' || ext === '.htm';
+
+      badge.textContent = ext ? ext.replace('.', '').toUpperCase() : 'DOC';
+      title.textContent = `[Source ${citation.index}] — ${citation.document_id.substring(0, 20)}`;
+
+      container.style.display = 'flex';
+      if (window.innerWidth <= 1100) {
+        container.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      const fileUrl = `/api/v1/documents/${encodeURIComponent(citation.document_id)}/file`;
+
+      if (isPdf) {
+        pdfView.style.display = 'block';
+        pdfControls.style.display = 'flex';
+        try {
+          pdfDoc = await pdfjsLib.getDocument(fileUrl).promise;
+          document.getElementById('pdfPageNum').textContent = `${citation.page_number || 1} / ${pdfDoc.numPages}`;
+          await renderPdfPage(citation.page_number || 1, citation);
+        } catch (e) {
+          pdfView.innerHTML = `<p style="color: #ef4444; padding: 1rem;">Failed to load PDF: ${e}</p>`;
+        }
+      } else if (isHtml) {
+        htmlView.style.display = 'block';
+        try {
+          const resp = await fetch(fileUrl);
+          const rawHtml = await resp.text();
+          renderHtmlView(rawHtml, citation);
+        } catch (e) {
+          htmlView.innerHTML = `<p style="color: #ef4444;">Failed to load HTML source: ${e}</p>`;
+        }
+      } else {
+        textView.style.display = 'block';
+        try {
+          const resp = await fetch(fileUrl);
+          const rawText = await resp.text();
+          renderTextView(rawText, citation);
+        } catch (e) {
+          textView.innerHTML = `<p style="color: #ef4444;">Failed to load text source: ${e}</p>`;
+        }
+      }
+    }
+
+    async function renderPdfPage(pageNum, citation) {
+      if (!pdfDoc) return;
+      currentPdfPageNum = pageNum;
+      document.getElementById('pdfPageNum').textContent = `${pageNum} / ${pdfDoc.numPages}`;
+      
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.25 });
+
+      const canvas = document.getElementById('pdfCanvas');
+      const context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+      // Render PDF Text Layer
+      const textContent = await page.getTextContent();
+      const textLayerDiv = document.getElementById('pdfTextLayer');
+      textLayerDiv.innerHTML = '';
+      textLayerDiv.style.height = `${viewport.height}px`;
+      textLayerDiv.style.width = `${viewport.width}px`;
+
+      pdfjsLib.renderTextLayer({
+        textContent: textContent,
+        container: textLayerDiv,
+        viewport: viewport,
+        textDivs: []
+      });
+
+      // Calculate & Draw PDF Highlight Overlay
+      const overlay = document.getElementById('pdfHighlightOverlay');
+      overlay.innerHTML = '';
+
+      const targetSnippet = (citation && citation.text_snippet) ? citation.text_snippet.trim() : '';
+      if (targetSnippet) {
+        const snippetWords = targetSnippet.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+        
+        setTimeout(() => {
+          const textDivs = textLayerDiv.querySelectorAll('span');
+          const matchedDivs = [];
+          textDivs.forEach(div => {
+            const text = div.textContent.toLowerCase();
+            if (snippetWords.some(w => text.includes(w))) {
+              matchedDivs.push(div);
+            }
+          });
+
+          if (matchedDivs.length > 0) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            matchedDivs.forEach(div => {
+              const rect = div.getBoundingClientRect();
+              const layerRect = textLayerDiv.getBoundingClientRect();
+              const left = rect.left - layerRect.left;
+              const top = rect.top - layerRect.top;
+              minX = Math.min(minX, left);
+              minY = Math.min(minY, top);
+              maxX = Math.max(maxX, left + rect.width);
+              maxY = Math.max(maxY, top + rect.height);
+            });
+
+            if (minX !== Infinity) {
+              const box = document.createElement('div');
+              box.className = 'pdf-highlight-box';
+              box.style.left = `${Math.max(0, minX - 4)}px`;
+              box.style.top = `${Math.max(0, minY - 4)}px`;
+              box.style.width = `${Math.min(viewport.width, (maxX - minX) + 8)}px`;
+              box.style.height = `${Math.min(viewport.height, (maxY - minY) + 8)}px`;
+              overlay.appendChild(box);
+
+              box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        }, 150);
+      }
+    }
+
+    function renderHtmlView(rawHtml, citation) {
+      const htmlView = document.getElementById('htmlView');
+      const targetSnippet = citation ? citation.text_snippet : '';
+
+      const cleanHtml = rawHtml.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
+
+      if (targetSnippet && targetSnippet.length > 3) {
+        const idx = cleanHtml.indexOf(targetSnippet);
+        if (idx !== -1) {
+          const before = cleanHtml.substring(0, idx);
+          const match = cleanHtml.substring(idx, idx + targetSnippet.length);
+          const after = cleanHtml.substring(idx + targetSnippet.length);
+
+          htmlView.innerHTML = before + `<mark class="dynamic-highlight" id="activeDocMark">${match}</mark>` + after;
+        } else {
+          const shortSnippet = targetSnippet.substring(0, 35).trim();
+          const sIdx = cleanHtml.indexOf(shortSnippet);
+          if (sIdx !== -1) {
+            const before = cleanHtml.substring(0, sIdx);
+            const match = cleanHtml.substring(sIdx, sIdx + shortSnippet.length);
+            const after = cleanHtml.substring(sIdx + shortSnippet.length);
+
+            htmlView.innerHTML = before + `<mark class="dynamic-highlight" id="activeDocMark">${match}</mark>` + after;
+          } else {
+            htmlView.innerHTML = cleanHtml;
+          }
+        }
+      } else {
+        htmlView.innerHTML = cleanHtml;
+      }
+
+      setTimeout(() => {
+        const mark = document.getElementById('activeDocMark');
+        if (mark) mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+
+    function renderTextView(rawText, citation) {
+      const textView = document.getElementById('textView');
+      const lines = rawText.split('\n');
+      const loc = citation ? citation.location : null;
+      const startLine = loc ? loc.start_line : null;
+      const endLine = loc ? loc.end_line : null;
+      const snippet = citation ? citation.text_snippet : '';
+
+      let html = '';
+      let targetLineIdx = -1;
+
+      lines.forEach((line, i) => {
+        const lineNum = i + 1;
+        let isHighlighted = false;
+
+        if (startLine && endLine) {
+          isHighlighted = (lineNum >= startLine && lineNum <= endLine);
+        } else if (snippet && line.toLowerCase().includes(snippet.substring(0, 20).toLowerCase())) {
+          isHighlighted = true;
+        }
+
+        if (isHighlighted && targetLineIdx === -1) targetLineIdx = i;
+
+        html += `
+          <div class="text-line-row ${isHighlighted ? 'highlighted' : ''}" id="text-line-${lineNum}">
+            <span class="text-line-num">${lineNum}</span>
+            <span class="text-line-content">${escapeHtml(line)}</span>
+          </div>
+        `;
+      });
+
+      textView.innerHTML = html;
+
+      setTimeout(() => {
+        const highlightedRow = textView.querySelector('.text-line-row.highlighted');
+        if (highlightedRow) {
+          highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+
+    function changePdfPage(delta) {
+      if (!pdfDoc) return;
+      const newPage = currentPdfPageNum + delta;
+      if (newPage >= 1 && newPage <= pdfDoc.numPages) {
+        renderPdfPage(newPage, activeCitation);
+      }
+    }
+
+    function closeDocViewer() {
+      const container = document.getElementById('docViewerContainer');
       container.style.display = 'none';
+      pdfDoc = null;
     }
 
     function toggleSources() {
@@ -778,7 +1066,6 @@
     }
 
     function scrollToSource(index) {
-      // Open sources if hidden
       if (!sourcesVisible) toggleSources();
       const card = document.getElementById(`source-card-${index}`);
       if (card) {
@@ -787,6 +1074,7 @@
         setTimeout(() => { card.style.boxShadow = ''; }, 2000);
       }
     }
+
 
     function escapeHtml(text) {
       const div = document.createElement('div');

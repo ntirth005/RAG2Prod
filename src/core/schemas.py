@@ -119,14 +119,28 @@ class IngestionResponse(BaseModel):
 
 # --- Context Engineering & Generation Schemas (Stage 4 & 5) ---
 
+class SourceLocation(BaseModel):
+    start_char: Optional[int] = Field(None, description="Start character offset in cleaned source document.")
+    end_char: Optional[int] = Field(None, description="End character offset in cleaned source document.")
+    raw_start_char: Optional[int] = Field(None, description="Start character offset in raw source document file.")
+    raw_end_char: Optional[int] = Field(None, description="End character offset in raw source document file.")
+    start_line: Optional[int] = Field(None, description="Start line number (1-indexed).")
+    end_line: Optional[int] = Field(None, description="End line number (1-indexed).")
+    bbox: Optional[List[float]] = Field(None, description="Bounding box [x0, y0, x1, y1] for PDFs if available.")
+    dom_selector: Optional[str] = Field(None, description="CSS/DOM selector for HTML elements.")
+
+
 class CitationSource(BaseModel):
     index: int = Field(..., description="Citation index number for [Source N] notation.")
     document_id: str = Field(..., description="Source document identifier.")
     chunk_id: str = Field(..., description="Child chunk identifier used.")
     page_number: Optional[int] = Field(None, description="Page number in source document, if available.")
+    file_type: str = Field("txt", description="File extension of source document (.pdf, .html, .txt, etc.).")
     similarity_score: float = Field(..., description="Cosine similarity score of this source.")
     text_snippet: str = Field("", description="Short snippet of the source text for UI highlighting.")
     parent_text: str = Field("", description="The full parent chunk context text.")
+    location: Optional[SourceLocation] = Field(None, description="Detailed location offsets and line numbers for dynamic highlighting.")
+
 
 
 class FormattedContext(BaseModel):

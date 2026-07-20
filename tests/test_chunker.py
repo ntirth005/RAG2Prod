@@ -86,3 +86,26 @@ def test_boundary_balancing() -> None:
         pt_tokens = count_tokens(pt)
         # Verify that no chunk was left with a tiny number of tokens (e.g. 5 tokens)
         assert pt_tokens > 15
+
+def test_location_metadata_tracking() -> None:
+    text = (
+        "Line 1: Introduction text.\n"
+        "Line 2: Second line context.\n"
+        "Line 3: Third line with details."
+    )
+    chunker = StructureAwareChunker(parent_size=50, child_size=20)
+    results = chunker.chunk_document("doc_loc", text, {"source": "test"})
+    
+    assert len(results) > 0
+    first_chunk = results[0]
+    meta = first_chunk["metadata"]
+    
+    assert "start_char" in meta
+    assert "end_char" in meta
+    assert "start_line" in meta
+    assert "end_line" in meta
+    assert meta["start_char"] >= 0
+    assert meta["end_char"] > meta["start_char"]
+    assert meta["start_line"] >= 1
+    assert meta["end_line"] >= meta["start_line"]
+
