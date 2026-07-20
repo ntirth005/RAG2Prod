@@ -116,3 +116,50 @@ class IngestionResponse(BaseModel):
     parent_chunks_count: int = Field(..., description="Number of parent chunks generated.")
     child_chunks_count: int = Field(..., description="Number of child chunks generated and embedded.")
 
+
+# --- Context Engineering & Generation Schemas (Stage 4 & 5) ---
+
+class CitationSource(BaseModel):
+    index: int = Field(..., description="Citation index number for [Source N] notation.")
+    document_id: str = Field(..., description="Source document identifier.")
+    chunk_id: str = Field(..., description="Child chunk identifier used.")
+    page_number: Optional[int] = Field(None, description="Page number in source document, if available.")
+    similarity_score: float = Field(..., description="Cosine similarity score of this source.")
+    text_snippet: str = Field("", description="Short snippet of the source text for UI highlighting.")
+
+
+class FormattedContext(BaseModel):
+    evidence_blocks: List[str] = Field(default_factory=list, description="Numbered evidence text blocks: '[Source 1]: ...'")
+    citations: List[CitationSource] = Field(default_factory=list, description="Citation provenance map.")
+    total_tokens: int = Field(0, description="Token count of combined context.")
+    truncated: bool = Field(False, description="Whether context was truncated to fit token budget.")
+
+
+class PromptPayload(BaseModel):
+    system_message: str = Field(..., description="System prompt with role and rules.")
+    user_message: str = Field(..., description="User query with formatted context.")
+    context_tokens: int = Field(0, description="Token count of the context portion.")
+
+
+class TokenUsage(BaseModel):
+    prompt_tokens: int = Field(0, description="Tokens consumed by the prompt.")
+    completion_tokens: int = Field(0, description="Tokens generated in the response.")
+    total_tokens: int = Field(0, description="Total tokens consumed.")
+
+
+class GenerationResult(BaseModel):
+    answer: str = Field(..., description="The generated LLM answer with inline [Source N] citations.")
+    citations: List[CitationSource] = Field(default_factory=list, description="Citation provenance map.")
+    token_usage: TokenUsage = Field(default_factory=TokenUsage, description="Token consumption metrics.")
+    retrieval_count: int = Field(0, description="Number of chunks retrieved from vector store.")
+    latency_ms: float = Field(0.0, description="End-to-end pipeline latency in milliseconds.")
+    model_used: str = Field("", description="LLM model identifier used for generation.")
+
+
+class QueryRequest(BaseModel):
+    query_text: str = Field(..., description="Natural language user question.")
+    top_k: int = Field(5, ge=1, le=50, description="Maximum number of chunks to retrieve.")
+    score_threshold: float = Field(0.0, ge=0.0, le=1.0, description="Minimum similarity score threshold.")
+    stream: bool = Field(False, description="If true, response is streamed via SSE.")
+    provider: str = Field("deepseek", description="LLM provider: 'deepseek' or 'openai'.")
+

@@ -1,20 +1,24 @@
 import json
+import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Optional, Dict, Any
 
 from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from core.database import get_db_session
 from core.storage_service import StorageService
 from core.retriever import DenseRetriever
+from core.generator import RAGPipeline
 from core.schemas import (
     IngestionResponse,
     RetrievalQuery,
     RetrievalResult,
+    QueryRequest,
+    GenerationResult,
 )
 from core.logger import info, error as log_error
 
@@ -132,3 +136,86 @@ async def search_chunks(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to perform search: {str(e)}",
         )
+
+
+@app.post(
+    f"{settings.API_V1_STR}/query",
+    response_model=GenerationResult,
+    status_code=status.HTTP_200_OK,
+    tags=["Generation"],
+)
+async def query_rag(
+    request: QueryRequest,
+    db: AsyncSession = Depends(get_db_session),
+):
+    """
+    Full RAG pipeline: retrieve → context engineering → LLM generation.
+    If stream=true, returns Server-Sent Events (SSE) instead of JSON.
+    """
+    try:
+        pipeline = RAGPipeline(session=db, provider=request.provider)
+
+        if request.stream:
+            return await _stream_response(pipeline, request)
+
+        result = await pipeline.run(request)
+        return result
+    except Exception as e:
+        log_error("api", f"Query error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process query: {str(e)}",
+        )
+
+
+@app.post(
+    f"{settings.API_V1_STR}/query/stream",
+    tags=["Generation"],
+)
+async def query_rag_stream(
+    request: QueryRequest,
+    db: AsyncSession = Depends(get_db_session),
+):
+    """
+    Dedicated SSE streaming endpoint for RAG query.
+    Streams token-by-token and sends a final citation summary event.
+    """
+    try:
+        pipeline = RAGPipeline(session=db, provider=request.provider)
+        return await _stream_response(pipeline, request)
+    except Exception as e:
+        log_error("api", f"Stream query error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to stream query: {str(e)}",
+        )
+
+
+async def _stream_response(pipeline: RAGPipeline, request: QueryRequest) -> StreamingResponse:
+    """Build an SSE StreamingResponse from the RAG pipeline."""
+    token_stream, context, model_id = await pipeline.run_stream(request)
+    start_time = time.perf_counter()
+
+    async def event_generator():
+        try:
+            async for token in token_stream:
+                yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
+
+            # Send citation summary as final event
+            latency = round((time.perf_counter() - start_time) * 1000, 1)
+            citations_data = [c.model_dump() for c in context.citations]
+            yield f"data: {json.dumps({'type': 'citations', 'citations': citations_data, 'model': model_id, 'latency_ms': latency})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            log_error("api", f"SSE stream error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

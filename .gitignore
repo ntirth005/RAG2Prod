@@ -228,3 +228,7 @@ __marimo__/
 
 # Runtime logs
 logs/
+
+# Local Object Storage
+.storage/
+src/.storage/

@@ -22,8 +22,21 @@ class Settings(BaseSettings):
     
     # LLM Settings (Stage 5)
     OPENAI_API_KEY: str = ""
+    OPENAI_MODEL_NAME: str = "gpt-4o-mini"
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_MODEL_NAME: str = "deepseek-chat"
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com/v1"
+    
     GEMINI_API_KEY: str = ""
     COHERE_API_KEY: str = ""
+    
+    # Generation Parameters (Stage 5)
+    LLM_DEFAULT_PROVIDER: str = "deepseek"
+    LLM_MAX_OUTPUT_TOKENS: int = 1024
+    LLM_TEMPERATURE: float = 0.3
+    MAX_CONTEXT_TOKENS: int = 4000
 
     # Ingestion & Embedding Configurations (Stage 1)
     EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"

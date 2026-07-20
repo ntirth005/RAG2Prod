@@ -1,31 +1,31 @@
-# Active Stage: Stage 3 — Basic Retrieval Complete
+# Active Stage: Stage 4 & 5 — Context Engineering + Generation Layer Complete
 
-You have completed **Milestone 1: First Working RAG** — **Stage 2: Storage Layer** and **Stage 3: Basic Retrieval**.
+You have completed **Milestone 2 (first half):** **Stage 4: Context Engineering** and **Stage 5: Generation Layer**.
 
 ---
 
-## Stage 2 & Stage 3 Objectives
-Set up the relational and vector storage layers (PostgreSQL and Pgvector) to store raw documents, parent-child chunks, and dense vector embeddings, alongside an object storage interface, DAO storage service, and REST retrieval API endpoints.
+## Stage 4 & 5 Objectives
+Build the context engineering pipeline (citation indexing, token-budget truncation, prompt assembly) and generation layer (multi-provider LLM client, SSE streaming, RAG pipeline orchestrator) to transform raw vector search results into fluent, cited answers.
 
 ---
 
 ## Task Checklist
-- [x] **Setup Relational DB (Postgres) Connection Management:**
-  - Create `src/core/database.py` with async connection pool using SQLAlchemy and `asyncpg`.
-- [x] **Define Database Models:**
-  - Create `src/core/models.py` with SQLAlchemy async models for `Document`, `ParentChunk`, and `ChildChunk`.
-  - Link child chunks to parent chunks and document metadata, and define a vector column for embeddings (dimension 384).
-- [x] **Implement Database Initialization & HNSW Vector Index:**
-  - Write async schema initialization to create tables.
-  - Enable the `pgvector` extension dynamically.
-  - Create an **HNSW vector index** on the `ChildChunk.embedding` column with Cosine Distance (`<=>`) for sub-linear similarity search.
-- [x] **Implement Storage DAO & High-Level Ingestion Service:**
-  - Create `src/core/storage_service.py` to handle parsing, chunking, embedding, object storage, and DB persistence atomically.
-- [x] **Implement Dense Vector Retrieval Engine:**
-  - Create `src/core/retriever.py` with cosine distance (`<=>`) queries, score thresholds, parent-context expansion, and JSONB metadata filtering.
-- [x] **Implement Object Storage Layer:**
-  - Create `src/core/object_storage.py` defining a generic file storage interface with local directory fallback.
-- [x] **Implement REST API Endpoints:**
-  - `POST /api/v1/documents/ingest` and `POST /api/v1/retrieval/search` in `src/main.py`.
-- [x] **Add Test Suites:**
-  - Write comprehensive tests in `tests/test_storage.py`, `tests/test_storage_service.py`, `tests/test_retriever.py`, and `tests/test_api.py`.
+- [x] **Context Engineering Schemas:**
+  - Add `CitationSource`, `FormattedContext`, `PromptPayload`, `TokenUsage`, `GenerationResult`, `QueryRequest` to `src/core/schemas.py`.
+- [x] **Config Updates:**
+  - Add DeepSeek + OpenAI provider settings, LLM generation parameters to `src/core/config.py` and `.env`.
+- [x] **System Prompt Constants:**
+  - Create `src/core/prompts.py` with externalized RAG system prompt, context template, and fallback messages.
+- [x] **Context Builder Module:**
+  - Create `src/core/context_builder.py` with `ContextBuilder` (token truncation), `PromptBuilder` (prompt assembly), and `CitationMapper` (parent dedup + citation indexing).
+- [x] **Generator Module:**
+  - Create `src/core/generator.py` with multi-provider `LLMClient` (DeepSeek + OpenAI via OpenAI-compatible API), mock fallback, and `RAGPipeline` orchestrator.
+- [x] **REST API Endpoints:**
+  - Add `POST /api/v1/query` (JSON or SSE) and `POST /api/v1/query/stream` (dedicated SSE) to `src/main.py`.
+- [x] **Dashboard Upgrade:**
+  - Add "Ask RAG2Prod" Q&A panel with SSE streaming animation, [Source N] clickable badges, expandable source cards with highlighted text snippets, and provider toggle.
+- [x] **Test Suites:**
+  - Create `tests/test_context_builder.py` (11 tests) and `tests/test_generator.py` (9 tests).
+  - All 42 tests passing across full suite.
+- [x] **Current Task Update:**
+  - Update `.rules/current_task.md` with Stage 4 & 5 checklist.
