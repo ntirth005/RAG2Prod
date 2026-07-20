@@ -712,28 +712,32 @@
       sourcesSection.style.display = 'block';
       document.getElementById('sourcesCount').textContent = `(${citations.length})`;
 
+      window.citationTexts = window.citationTexts || {};
       const grid = document.getElementById('sourcesGrid');
-      grid.innerHTML = citations.map(c => `
-        <div class="source-card" id="source-card-${c.index}">
-          <div class="source-card-header">
-            <span class="source-index">[Source ${c.index}]</span>
-            <span class="source-score">${(c.similarity_score * 100).toFixed(1)}% match</span>
-          </div>
-          <div class="source-snippet">${highlightMatchInParent(c.parent_text, c.text_snippet)}</div>
-          <div class="source-meta" style="flex-direction: column; align-items: flex-start; gap: 0.4rem;">
-            <div style="display: flex; gap: 0.75rem;">
-              <span>📄 Doc: ${c.document_id.substring(0, 20)}${c.document_id.length > 20 ? '...' : ''}</span>
-              ${c.page_number !== null ? `<span>📃 Page ${c.page_number}</span>` : ''}
-              <span>🔑 Chunk: ${c.chunk_id.substring(0, 8)}...</span>
+      grid.innerHTML = citations.map(c => {
+        window.citationTexts[c.index] = c.text_snippet;
+        return `
+          <div class="source-card" id="source-card-${c.index}">
+            <div class="source-card-header">
+              <span class="source-index">[Source ${c.index}]</span>
+              <span class="source-score">${(c.similarity_score * 100).toFixed(1)}% match</span>
             </div>
-            ${c.page_number !== null ? `
-              <button class="btn-mini" style="margin-top: 0.25rem; font-weight: 600;" onclick="loadPdfViewer('${escapeHtml(c.document_id)}', ${c.page_number}, '${escapeHtml(c.text_snippet).replace(/'/g, "\\'")}')">
-                📖 View PDF (Page ${c.page_number})
-              </button>
-            ` : ''}
+            <div class="source-snippet">${highlightMatchInParent(c.parent_text, c.text_snippet)}</div>
+            <div class="source-meta" style="flex-direction: column; align-items: flex-start; gap: 0.4rem;">
+              <div style="display: flex; gap: 0.75rem;">
+                <span>📄 Doc: ${c.document_id.substring(0, 20)}${c.document_id.length > 20 ? '...' : ''}</span>
+                ${c.page_number !== null ? `<span>📃 Page ${c.page_number}</span>` : ''}
+                <span>🔑 Chunk: ${c.chunk_id.substring(0, 8)}...</span>
+              </div>
+              ${c.page_number !== null ? `
+                <button class="btn-mini" style="margin-top: 0.25rem; font-weight: 600;" onclick="loadPdfViewer('${escapeHtml(c.document_id)}', ${c.page_number}, window.citationTexts[${c.index}])">
+                  📖 View PDF (Page ${c.page_number})
+                </button>
+              ` : ''}
+            </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function loadPdfViewer(docId, pageNum, chunkText) {
@@ -995,7 +999,9 @@
         const data = await resp.json();
 
         if (data.items && data.items.length > 0) {
+          window.searchTexts = window.searchTexts || {};
           resContainer.innerHTML = data.items.map((item, idx) => {
+            window.searchTexts[item.chunk_id] = item.chunk_text;
             const pageNum = item.source_metadata ? item.source_metadata.page_number : null;
             return `
               <div class="chunk-card">
@@ -1009,7 +1015,7 @@
                   <span>${highlightMatchInParent(item.parent_text, item.chunk_text)}</span>
                   ${pageNum !== null && pageNum !== undefined ? `
                     <div style="margin-top: 0.5rem;">
-                      <button class="btn-mini" style="font-weight: 600;" onclick="loadPdfViewer('${escapeHtml(item.document_id)}', ${pageNum}, '${escapeHtml(item.chunk_text).replace(/'/g, "\\'")}')">
+                      <button class="btn-mini" style="font-weight: 600;" onclick="loadPdfViewer('${escapeHtml(item.document_id)}', ${pageNum}, window.searchTexts['${escapeHtml(item.chunk_id)}'])">
                         📖 View PDF (Page ${pageNum})
                       </button>
                     </div>
