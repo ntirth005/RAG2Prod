@@ -16,8 +16,8 @@ engine = create_async_engine(
     DATABASE_URL,
     echo=False,
     future=True,
-    pool_size=10,
-    max_overflow=20
+    pool_size=50,
+    max_overflow=100
 )
 
 # Create a session factory
@@ -58,4 +58,4 @@ async def init_db() -> bool:
             f"Failed to initialize database: {e}. "
             "Please ensure PostgreSQL is running with pgvector on the configured host/port."
         )
-        return False
+        raise e
