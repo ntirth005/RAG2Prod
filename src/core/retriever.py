@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -60,10 +61,12 @@ class DenseRetriever:
                         # PostgreSQL JSONB key matching
                         stmt = stmt.where(ChildChunk.source_metadata[key].as_json() == val)
 
+            # Apply score threshold filter in DB (cosine distance <= 1.0 - threshold)
+            if query.score_threshold > 0:
+                stmt = stmt.where(distance_expr <= (1.0 - query.score_threshold))
+
             # Retrieve top_k candidate results
-            # Fetch up to top_k * 2 to account for score threshold filtering
-            fetch_limit = max(query.top_k * 2, 20)
-            stmt = stmt.limit(fetch_limit)
+            stmt = stmt.limit(query.top_k)
 
             result = await self.session.execute(stmt)
             rows = result.all()
@@ -157,8 +160,8 @@ class DenseRetriever:
 # --- Stage 7: Hybrid Retrieval & Reranking Subsystem ---
 
 import re
-from rank_bm25 import BM25Okapi
 from core.config import settings
+from sqlalchemy import func
 
 
 def _tokenize(text: str) -> List[str]:
@@ -175,9 +178,18 @@ class SparseRetriever:
         self.session = session
 
     async def search(self, query: RetrievalQuery) -> RetrievalResult:
-        """Executes a BM25 sparse keyword search over stored ChildChunks."""
-        with timer_step("retriever", f"Sparse BM25 search for query '{query.query_text[:30]}...'"):
-            stmt = select(ChildChunk, ParentChunk).join(ParentChunk, ChildChunk.parent_id == ParentChunk.id)
+        """Executes a Postgres Full Text Search (FTS) sparse keyword search over stored ChildChunks."""
+        with timer_step("retriever", f"Sparse FTS search for query '{query.query_text[:30]}...'"):
+            ts_query = func.websearch_to_tsquery('english', query.query_text)
+            ts_vector = func.to_tsvector('english', ChildChunk.text)
+            rank_score = func.ts_rank_cd(ts_vector, ts_query).label("rank")
+
+            stmt = (
+                select(ChildChunk, ParentChunk, rank_score)
+                .join(ParentChunk, ChildChunk.parent_id == ParentChunk.id)
+                .where(ts_vector.op("@@")(ts_query))
+                .order_by(rank_score.desc())
+            )
 
             if query.filter:
                 if query.filter.document_id:
@@ -187,49 +199,39 @@ class SparseRetriever:
                     for key, val in query.filter.metadata_equals.items():
                         stmt = stmt.where(ChildChunk.source_metadata[key].as_json() == val)
 
+            stmt = stmt.limit(query.top_k)
             result = await self.session.execute(stmt)
             rows = result.all()
 
             if not rows:
                 return RetrievalResult(query_text=query.query_text, total_retrieved=0, items=[])
 
-            corpus = [_tokenize(child.text) for child, _ in rows]
-            bm25 = BM25Okapi(corpus)
-            query_tokens = _tokenize(query.query_text)
-            scores = bm25.get_scores(query_tokens)
+            # Normalize scores for hybrid compatibility
+            max_score = max((float(r.rank) for r in rows), default=1.0)
+            if max_score <= 0:
+                max_score = 1.0
 
             scored_items = []
-            max_score = max(scores) if len(scores) > 0 and max(scores) > 0 else 1.0
-
-            for idx, (child, parent) in enumerate(rows):
-                raw_score = scores[idx]
-                if raw_score <= 0:
-                    continue
-
-                norm_score = round(float(raw_score / max_score), 4)
+            for child, parent, rank in rows:
+                norm_score = round(float(rank) / max_score, 4)
                 if norm_score < query.score_threshold:
                     continue
 
                 scored_items.append(
-                    (
-                        norm_score,
-                        RetrievalResultItem(
-                            chunk_id=child.id,
-                            parent_id=child.parent_id,
-                            document_id=child.document_id,
-                            chunk_text=child.text,
-                            parent_text=parent.text,
-                            similarity_score=norm_score,
-                            rerank_score=norm_score,
-                            source_metadata=child.source_metadata or {},
-                        ),
+                    RetrievalResultItem(
+                        chunk_id=child.id,
+                        parent_id=child.parent_id,
+                        document_id=child.document_id,
+                        chunk_text=child.text,
+                        parent_text=parent.text,
+                        similarity_score=norm_score,
+                        rerank_score=norm_score,
+                        source_metadata=child.source_metadata or {},
                     )
                 )
 
-            scored_items.sort(key=lambda x: x[0], reverse=True)
-            top_items = [item for _, item in scored_items[:query.top_k]]
-            info("retriever", f"BM25 query returned {len(top_items)} matching chunks")
-            return RetrievalResult(query_text=query.query_text, total_retrieved=len(top_items), items=top_items)
+            info("retriever", f"FTS query returned {len(scored_items)} matching chunks")
+            return RetrievalResult(query_text=query.query_text, total_retrieved=len(scored_items), items=scored_items)
 
 
 class CrossEncoderReranker:
@@ -251,7 +253,7 @@ class CrossEncoderReranker:
                 self._model = False
         return self._model
 
-    def rerank(self, query_text: str, items: List[RetrievalResultItem], top_k: int) -> List[RetrievalResultItem]:
+    async def rerank(self, query_text: str, items: List[RetrievalResultItem], top_k: int) -> List[RetrievalResultItem]:
         """Re-scores candidate items using CrossEncoder model or lexical overlap fallback."""
         if not items:
             return []
@@ -260,7 +262,8 @@ class CrossEncoderReranker:
             model = self._get_model()
             if model:
                 pairs = [[query_text, item.chunk_text] for item in items]
-                scores = model.predict(pairs)
+                # Run cross-encoder inference in a separate thread to avoid blocking asyncio loop
+                scores = await asyncio.to_thread(model.predict, pairs)
                 for item, score in zip(items, scores):
                     item.rerank_score = round(float(score), 4)
             else:
@@ -305,13 +308,13 @@ class HybridRetriever:
         if query.mode == "dense":
             res = await self.dense.search(query)
             if query.rerank and settings.ENABLE_RERANKING:
-                res.items = self.reranker.rerank(query.query_text, res.items, query.top_k)
+                res.items = await self.reranker.rerank(query.query_text, res.items, query.top_k)
             return res
 
         if query.mode == "sparse":
             res = await self.sparse.search(query)
             if query.rerank and settings.ENABLE_RERANKING:
-                res.items = self.reranker.rerank(query.query_text, res.items, query.top_k)
+                res.items = await self.reranker.rerank(query.query_text, res.items, query.top_k)
             return res
 
         # Mode == "hybrid" (RRF Fusion)
@@ -342,7 +345,7 @@ class HybridRetriever:
 
             # Optional Cross-Encoder Reranking
             if query.rerank and settings.ENABLE_RERANKING:
-                final_items = self.reranker.rerank(query.query_text, candidates, query.top_k)
+                final_items = await self.reranker.rerank(query.query_text, candidates, query.top_k)
             else:
                 final_items = candidates[:query.top_k]
 
@@ -393,7 +396,7 @@ class HybridRetriever:
         sorted_candidates = sorted(merged_items.values(), key=lambda x: x.similarity_score, reverse=True)
 
         if rerank and settings.ENABLE_RERANKING:
-            final_items = self.reranker.rerank(query_texts[0], sorted_candidates, top_k)
+            final_items = await self.reranker.rerank(query_texts[0], sorted_candidates, top_k)
         else:
             final_items = sorted_candidates[:top_k]
 
