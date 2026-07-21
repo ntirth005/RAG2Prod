@@ -8,6 +8,15 @@ class EmbeddingClient:
     Client for generating text embeddings using the Gemini text-embedding-004 model.
     Includes a mock fallback for local testing and dev environments when API keys are missing.
     """
+    
+    _http_client = None
+
+    @classmethod
+    def get_http_client(cls) -> httpx.AsyncClient:
+        if cls._http_client is None:
+            cls._http_client = httpx.AsyncClient(limits=httpx.Limits(max_connections=100, max_keepalive_connections=20))
+        return cls._http_client
+
     def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None):
         self.api_key = api_key or settings.GEMINI_API_KEY
         self.model_name = model_name or settings.EMBEDDING_MODEL_NAME
@@ -29,15 +38,11 @@ class EmbeddingClient:
             }
         }
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, json=payload, timeout=20.0)
-                response.raise_for_status()
-                resp_data = response.json()
-                return resp_data["embedding"]["values"]
-        except Exception:
-            # Fallback to mock on connection errors during testing
-            return self._generate_mock_embedding(text)
+        client = self.get_http_client()
+        response = await client.post(url, headers=headers, json=payload, timeout=20.0)
+        response.raise_for_status()
+        resp_data = response.json()
+        return resp_data["embedding"]["values"]
 
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Generate embedding vectors for a batch of text chunks."""
@@ -57,15 +62,11 @@ class EmbeddingClient:
         ]
         payload = {"requests": requests}
 
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, json=payload, timeout=30.0)
-                response.raise_for_status()
-                resp_data = response.json()
-                return [emb["values"] for emb in resp_data["embeddings"]]
-        except Exception:
-            # Fallback to mock on connection errors
-            return [self._generate_mock_embedding(text) for text in texts]
+        client = self.get_http_client()
+        response = await client.post(url, headers=headers, json=payload, timeout=30.0)
+        response.raise_for_status()
+        resp_data = response.json()
+        return [emb["values"] for emb in resp_data["embeddings"]]
 
     def _generate_mock_embedding(self, text: str) -> List[float]:
         """Generate a deterministic mock embedding vector of the configured dimension size."""
