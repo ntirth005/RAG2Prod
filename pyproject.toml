@@ -19,6 +19,10 @@ dependencies = [
     "python-multipart>=0.0.32",
     "docling>=2.114.0",
     "rank-bm25>=0.2.2",
+    "prometheus-client>=0.25.0",
+    "python-json-logger>=4.1.0",
+    "prometheus-fastapi-instrumentator>=8.0.2",
+    "aiofiles>=25.1.0",
 ]
 
 [project.optional-dependencies]
