@@ -52,6 +52,14 @@ class LLMClient:
     Multi-provider LLM client using the OpenAI-compatible chat completions API.
     Supports DeepSeek and OpenAI. Falls back to a mock response when no API key is configured.
     """
+    
+    _http_client = None
+
+    @classmethod
+    def get_http_client(cls) -> httpx.AsyncClient:
+        if cls._http_client is None:
+            cls._http_client = httpx.AsyncClient(limits=httpx.Limits(max_connections=100, max_keepalive_connections=20))
+        return cls._http_client
 
     def __init__(
         self,
@@ -111,10 +119,10 @@ class LLMClient:
         headers = self._build_headers()
 
         with timer_step("generator", f"LLM generation via {self.provider}/{self.model_name}"):
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, json=body, headers=headers, timeout=60.0)
-                response.raise_for_status()
-                data = response.json()
+            client = self.get_http_client()
+            response = await client.post(url, json=body, headers=headers, timeout=60.0)
+            response.raise_for_status()
+            data = response.json()
 
         choice = data["choices"][0]
         answer = choice["message"]["content"]
@@ -152,12 +160,12 @@ class LLMClient:
         headers = self._build_headers()
 
         with timer_step("generator", f"LLM streaming via {self.provider}/{self.model_name}"):
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST", url, json=body, headers=headers, timeout=120.0
-                ) as response:
-                    response.raise_for_status()
-                    async for line in response.aiter_lines():
+            client = self.get_http_client()
+            async with client.stream(
+                "POST", url, json=body, headers=headers, timeout=120.0
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
                         if not line.startswith("data: "):
                             continue
                         payload = line[6:]
