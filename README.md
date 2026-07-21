@@ -1,6 +1,8 @@
 # RAG2Prod
 Building an Agentic RAG System from Prototype to Production
 
+> **Note:** The system has recently undergone a comprehensive production-readiness hardening phase. Please see the [Production Architecture Specification](docs/production_architecture_spec.md) for detailed SRE standards, ETL pipeline design, and library justifications.
+
 ## Development Stages
 
 ### Development Roadmap
