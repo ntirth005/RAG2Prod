@@ -86,7 +86,7 @@ flowchart TD
   - [ ] Query Rewriting
   - [ ] Query Expansion
 * **Stage 7: Hybrid Retrieval**
-  - [ ] Sparse (BM25) Retrieval
+  - [ ] Sparse (FTS) Retrieval
   - [ ] Hybrid Fusion (RRF or Reciprocal Rank Fusion)
   - [ ] Cross-Encoder Reranking
 
@@ -167,7 +167,7 @@ end
 
 subgraph Hybrid_Retrieval
     Dense[Dense Vector Retrieval]
-    Sparse[Sparse BM25 Retrieval]
+    Sparse[Sparse FTS Retrieval]
     Graph[Graph Retrieval]
     Filter[Metadata Filtering]
     Fusion[RRF Fusion]
@@ -571,7 +571,7 @@ flowchart TD
 
 ### Hybrid Retrieval Subsystem
 
-Combines dense vector search, sparse keyword search (BM25), and knowledge graph queries. Filters results by metadata, fuses them via RRF, and applies cross-encoder reranking and compression.
+Combines dense vector search, sparse keyword search (FTS), and knowledge graph queries. Filters results by metadata, fuses them via RRF, and applies cross-encoder reranking and compression.
 
 <details>
 <summary><b>Click to expand Hybrid Retrieval Subsystem Diagram</b></summary>
@@ -588,7 +588,7 @@ Query --> Sparse
 Query --> Graph
 
 Dense[Dense Retrieval]
-Sparse[BM25 Retrieval]
+Sparse[FTS Retrieval]
 Graph[Graph Retrieval]
 
 VectorDB[(Vector DB)] --> Dense
