@@ -10,6 +10,7 @@ import time
 from typing import AsyncGenerator, Optional, Dict, Any, List
 
 import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from core.config import settings
 from core.schemas import (
@@ -100,6 +101,12 @@ class LLMClient:
             "Authorization": f"Bearer {self.api_key}",
         }
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(httpx.HTTPError),
+        reraise=True
+    )
     async def generate(self, prompt: PromptPayload) -> tuple[str, TokenUsage]:
         """
         Generate a complete response (non-streaming).
@@ -137,6 +144,12 @@ class LLMClient:
         info("generator", f"Generation complete: {token_usage.total_tokens} tokens used")
         return answer, token_usage
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(httpx.HTTPError),
+        reraise=True
+    )
     async def stream(self, prompt: PromptPayload) -> AsyncGenerator[str, None]:
         """
         Stream response tokens via SSE.
