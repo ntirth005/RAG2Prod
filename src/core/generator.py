@@ -179,10 +179,13 @@ class LLMClient:
         return f"{MOCK_GENERATION_PREFIX}{context_section}"
 
 
+from core.retriever import HybridRetriever
+from core.validation import ValidationEngine
+
 class RAGPipeline:
     """
     End-to-end RAG pipeline orchestrator.
-    Chains: QueryUnderstandingEngine → DenseRetriever (multi-query) → ContextBuilder → PromptBuilder → LLMClient
+    Chains: QueryUnderstandingEngine → HybridRetriever (BM25 + Dense + RRF + Reranker) → ContextBuilder → PromptBuilder → LLMClient → ValidationEngine
     """
 
     def __init__(
@@ -192,17 +195,19 @@ class RAGPipeline:
     ):
         self.session = session
         self.provider = provider
-        self.retriever = DenseRetriever(session=session)
+        self.retriever = HybridRetriever(session=session)
         self.context_builder = ContextBuilder()
         self.prompt_builder = PromptBuilder()
+        self.validation_engine = ValidationEngine()
 
     async def run(self, request: QueryRequest) -> GenerationResult:
         """
         Execute the full RAG pipeline (non-streaming):
         1. Query Understanding (PII, Intent/Complexity, Rewriting/Expansion/HyDE)
-        2. Multi-query vector retrieval & deduplication
+        2. Multi-query Hybrid retrieval (Dense + Sparse + RRF + Reranker)
         3. Context building with citations & token truncation
         4. Prompt assembly & LLM answer generation
+        5. Validation Layer & Output Guardrails evaluation
         """
         start_time = time.perf_counter()
         provider = request.provider or self.provider
@@ -214,7 +219,7 @@ class RAGPipeline:
             qu_engine = QueryUnderstandingEngine(llm_client=llm)
             canonical_query, query_trace = await qu_engine.process(request.query_text)
 
-            # Step 2: Multi-query Retrieval
+            # Step 2: Multi-query Hybrid Retrieval
             retrieval_result = await self.retriever.search_multi(
                 query_texts=query_trace.rewritten_queries,
                 top_k=request.top_k,
@@ -242,6 +247,9 @@ class RAGPipeline:
             # Step 5: Generate answer
             answer, token_usage = await llm.generate(prompt)
 
+            # Step 6: Validation Layer & Output Guardrails
+            validation_res = self.validation_engine.validate(answer, context)
+
             latency = (time.perf_counter() - start_time) * 1000
 
             return GenerationResult(
@@ -252,6 +260,7 @@ class RAGPipeline:
                 latency_ms=round(latency, 1),
                 model_used=f"{provider}/{llm.model_name}",
                 query_trace=query_trace,
+                validation_result=validation_res,
             )
 
     async def run_stream(

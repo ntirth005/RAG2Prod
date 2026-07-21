@@ -355,3 +355,51 @@ class HybridRetriever:
                 total_retrieved=len(final_items),
                 items=final_items,
             )
+
+    async def search_multi(
+        self,
+        query_texts: List[str],
+        top_k: int = 5,
+        score_threshold: float = 0.0,
+        filter_rule: Optional[MetadataFilter] = None,
+        mode: str = "hybrid",
+        rerank: bool = True,
+    ) -> RetrievalResult:
+        """
+        Executes multi-query hybrid search over query variations (e.g. expansion queries or HyDE).
+        Deduplicates matched chunks and reranks top candidates.
+        """
+        if not query_texts:
+            return RetrievalResult(query_text="", total_retrieved=0, items=[])
+
+        merged_items: Dict[str, RetrievalResultItem] = {}
+        for q_text in query_texts:
+            q_req = RetrievalQuery(
+                query_text=q_text,
+                top_k=top_k,
+                score_threshold=score_threshold,
+                filter=filter_rule,
+                mode=mode,
+                rerank=False,  # Rerank once at the end
+            )
+            res = await self.search(q_req)
+            for item in res.items:
+                if item.chunk_id not in merged_items:
+                    merged_items[item.chunk_id] = item
+                else:
+                    if item.similarity_score > merged_items[item.chunk_id].similarity_score:
+                        merged_items[item.chunk_id] = item
+
+        sorted_candidates = sorted(merged_items.values(), key=lambda x: x.similarity_score, reverse=True)
+
+        if rerank and settings.ENABLE_RERANKING:
+            final_items = self.reranker.rerank(query_texts[0], sorted_candidates, top_k)
+        else:
+            final_items = sorted_candidates[:top_k]
+
+        info("retriever", f"Multi-query hybrid search returned {len(final_items)} deduplicated chunks")
+        return RetrievalResult(
+            query_text=query_texts[0],
+            total_retrieved=len(final_items),
+            items=final_items,
+        )

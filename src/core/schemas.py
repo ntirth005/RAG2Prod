@@ -200,6 +200,7 @@ class GenerationResult(BaseModel):
     latency_ms: float = Field(0.0, description="End-to-end pipeline latency in milliseconds.")
     model_used: str = Field("", description="LLM model identifier used for generation.")
     query_trace: Optional[QueryTrace] = Field(None, description="Query understanding trace (intent, complexity, expansion, HyDE).")
+    validation_result: Optional[ValidationResult] = Field(None, description="Validation layer evaluation (groundedness, safety, confidence score).")
 
 
 class QueryRequest(BaseModel):
