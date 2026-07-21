@@ -29,10 +29,12 @@ import sys
 import json
 import time
 import logging
+from logging import StreamHandler
 import datetime
 import threading
 from typing import Optional, Any
 from contextlib import contextmanager
+from pythonjsonlogger import jsonlogger
 
 import structlog
 from rich.console import Console
@@ -176,17 +178,24 @@ def configure_logging():
 
     _init_dirs()
 
+    # Configure standard python logging with JSON formatter
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # Remove existing handlers
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+        
+    json_handler = logging.StreamHandler(sys.stdout)
+    formatter = jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+    json_handler.setFormatter(formatter)
+    root_logger.addHandler(json_handler)
+
     # Silence the stdlib logger output — we handle everything in our renderer
     stdlib_logger = logging.getLogger("rag2prod")
-    stdlib_logger.setLevel(logging.DEBUG)
-    stdlib_logger.handlers.clear()
-    stdlib_logger.addHandler(logging.NullHandler())
+    stdlib_logger.setLevel(logging.INFO)
 
-    # Configure structlog: our custom renderer is the final processor.
-    # We use a NullLogger factory because our renderer already writes
-    # to both terminal (rich) and file (JSON) directly.
     class _NullLogger:
-        """Discards the final rendered string — output is already handled."""
         def msg(self, message: str) -> None:
             pass
         def err(self, message: str) -> None:
@@ -199,11 +208,11 @@ def configure_logging():
             structlog.processors.add_log_level,
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
-            _structlog_renderer,
+            structlog.processors.JSONRenderer() if os.environ.get("ENV") == "production" else _structlog_renderer,
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
         context_class=dict,
-        logger_factory=lambda *args: _NullLogger(),
+        logger_factory=lambda *args: logging.getLogger(args[0]) if os.environ.get("ENV") == "production" else _NullLogger(),
         cache_logger_on_first_use=True,
     )
 
