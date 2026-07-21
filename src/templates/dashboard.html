@@ -395,6 +395,39 @@
     }
     .btn-mini:hover { background: rgba(99, 102, 241, 0.2); border-color: var(--accent-primary); }
     .btn-mini.btn-delete:hover { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #f87171; }
+
+    /* ── Layout Helpers ── */
+    .grid-single-col { grid-template-columns: 1fr !important; }
+    .minimized-card-body { display: none !important; }
+
+    /* ── Custom Modal ── */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .modal-content {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 12px; padding: 2rem; width: 90%; max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); transform: translateY(-20px);
+      transition: transform 0.2s;
+    }
+    .modal-overlay.active .modal-content { transform: translateY(0); }
+    .modal-title { font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 600; color: #fff; margin-bottom: 0.75rem; }
+    .modal-body { font-size: 0.9rem; color: #d1d5db; margin-bottom: 1.5rem; line-height: 1.5; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
+    .btn-cancel {
+      background: rgba(255, 255, 255, 0.05); color: #fff; border: 1px solid var(--card-border);
+      padding: 0.6rem 1rem; border-radius: 8px; font-weight: 500; font-size: 0.85rem; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-cancel:hover { background: rgba(255, 255, 255, 0.1); }
+    .btn-confirm-danger {
+      background: #ef4444; color: #fff; border: none;
+      padding: 0.6rem 1rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-confirm-danger:hover { background: #dc2626; }
   </style>
 </head>
 <body>
@@ -491,7 +524,7 @@
     </section>
 
     <!-- ═══════════ Ingestion & Retrieval (2-column grid) ═══════════ -->
-    <div class="bottom-grid">
+    <div class="bottom-grid" id="bottomGrid">
       <!-- Ingestion Panel -->
       <section class="card">
         <div class="card-title">
@@ -523,39 +556,42 @@
       </section>
 
       <!-- Vector Retrieval Panel -->
-      <section class="card">
-        <div class="card-title">
+      <section class="card" id="vectorSearchCard">
+        <div class="card-title" onclick="toggleVectorSearch()" style="cursor: pointer; display: flex; justify-content: space-between; width: 100%;">
           <span>🔍 Dense Vector Search & Retrieval Engine</span>
+          <span id="vsToggleIcon" style="font-size: 0.8rem; color: var(--text-muted);">▼</span>
         </div>
-        <div class="form-group">
-          <label>Search Query</label>
-          <input type="text" id="queryInput" placeholder="Enter natural language query...">
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div id="vectorSearchBody" style="display: flex; flex-direction: column; gap: 1.25rem;">
           <div class="form-group">
-            <label>Top K Chunks (<span id="topKVal">5</span>)</label>
-            <input type="range" id="topKInput" min="1" max="20" value="5"
-                   oninput="document.getElementById('topKVal').innerText = this.value">
+            <label>Search Query</label>
+            <input type="text" id="queryInput" placeholder="Enter natural language query...">
           </div>
-          <div class="form-group">
-            <label>Score Threshold (<span id="scoreVal">0.00</span>)</label>
-            <input type="range" id="scoreInput" min="0" max="1" step="0.05" value="0.00"
-                   oninput="document.getElementById('scoreVal').innerText = parseFloat(this.value).toFixed(2)">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label>Top K Chunks (<span id="topKVal">5</span>)</label>
+              <input type="range" id="topKInput" min="1" max="20" value="5"
+                     oninput="document.getElementById('topKVal').innerText = this.value">
+            </div>
+            <div class="form-group">
+              <label>Score Threshold (<span id="scoreVal">0.00</span>)</label>
+              <input type="range" id="scoreInput" min="0" max="1" step="0.05" value="0.00"
+                     oninput="document.getElementById('scoreVal').innerText = parseFloat(this.value).toFixed(2)">
+            </div>
           </div>
-        </div>
-        <div class="form-group" id="filterContainer">
-          <label>Filter by Documents (Optional)</label>
-          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: -0.2rem; display: flex; justify-content: space-between; align-items: center;">
-            <span>Select documents from the Ingestion Workspace.</span>
-            <button class="btn-mini" onclick="document.querySelectorAll('.doc-filter-cb').forEach(cb => cb.checked = false)">Clear Selections</button>
+          <div class="form-group" id="filterContainer">
+            <label>Filter by Documents (Optional)</label>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: -0.2rem; display: flex; justify-content: space-between; align-items: center;">
+              <span>Select documents from the Ingestion Workspace.</span>
+              <button class="btn-mini" onclick="document.querySelectorAll('.doc-filter-cb').forEach(cb => cb.checked = false)">Clear Selections</button>
+            </div>
+            <input type="hidden" id="filterDocId">
           </div>
-          <input type="hidden" id="filterDocId">
-        </div>
-        <button class="btn-action" onclick="submitSearch()">Execute Cosine Vector Search</button>
-        <div id="searchResults" style="margin-top: 0.5rem; overflow-y: auto; max-height: 400px;">
-          <div class="empty-state">
-            <div class="empty-state-icon">🔍</div>
-            <p>Execute a query to retrieve matching chunks.</p>
+          <button class="btn-action" onclick="submitSearch()">Execute Cosine Vector Search</button>
+          <div id="searchResults" style="margin-top: 0.5rem; overflow-y: auto; max-height: 400px;">
+            <div class="empty-state">
+              <div class="empty-state-icon">🔍</div>
+              <p>Execute a query to retrieve matching chunks.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -1064,10 +1100,35 @@
       pdfDoc = null;
     }
 
+    function toggleVectorSearch(forceState) {
+      const body = document.getElementById('vectorSearchBody');
+      const icon = document.getElementById('vsToggleIcon');
+      
+      let isMinimized = body.classList.contains('minimized-card-body');
+      if (forceState !== undefined) {
+        isMinimized = !forceState; // forceState true means minimized
+      }
+      
+      if (isMinimized) {
+        body.classList.remove('minimized-card-body');
+        icon.textContent = '▼';
+      } else {
+        body.classList.add('minimized-card-body');
+        icon.textContent = '▲';
+      }
+    }
+
     function toggleSources() {
       sourcesVisible = !sourcesVisible;
       document.getElementById('sourcesGrid').style.display = sourcesVisible ? 'grid' : 'none';
       document.getElementById('sourcesToggleText').textContent = sourcesVisible ? 'Hide Sources' : 'Show Sources';
+      
+      const vsCard = document.getElementById('vectorSearchCard');
+      if (sourcesVisible) {
+        if (vsCard) vsCard.style.display = 'none';
+      } else {
+        if (vsCard) vsCard.style.display = 'flex';
+      }
     }
 
     function scrollToSource(index) {
@@ -1167,13 +1228,13 @@
         if (docs.length > 0) {
           docList.innerHTML = docs.map(doc => `
             <div class="doc-item-row" id="doc-row-${doc.document_id}">
-              <div class="doc-item-info" style="flex-direction: row; align-items: center; gap: 0.5rem;">
+              <label class="doc-item-info" for="cb-${doc.document_id}" style="flex-direction: row; align-items: center; gap: 0.5rem; cursor: pointer; flex: 1; margin: 0; display: flex;">
                 <input type="checkbox" class="doc-filter-cb" value="${escapeHtml(doc.document_id)}" id="cb-${doc.document_id}" style="cursor: pointer;">
                 <div style="display: flex; flex-direction: column; gap: 0.2rem; min-width: 0;">
-                  <span class="doc-item-name" title="${escapeHtml(doc.filename)}"><label for="cb-${doc.document_id}" style="color: #f3f4f6; cursor: pointer; font-size: inherit;">${escapeHtml(doc.filename)}</label></span>
+                  <span class="doc-item-name" title="${escapeHtml(doc.filename)}" style="color: #f3f4f6;">${escapeHtml(doc.filename)}</span>
                   <span class="doc-item-id">ID: ${escapeHtml(doc.document_id)}</span>
                 </div>
-              </div>
+              </label>
               <div class="doc-item-actions">
                 <button class="btn-mini btn-delete" onclick="deleteDoc('${escapeHtml(doc.document_id)}')">Delete</button>
               </div>
@@ -1205,23 +1266,42 @@
       });
     }
 
-    async function deleteDoc(docId) {
-      if (!confirm(`Are you sure you want to delete document "${docId}" and all its chunk data?`)) return;
+    function openConfirmModal(message, onConfirm) {
+      document.getElementById('confirmModalBody').textContent = message;
+      const confirmBtn = document.getElementById('confirmModalBtn');
+      // Clone to remove old event listeners
+      const newConfirmBtn = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
       
-      const row = document.getElementById(`doc-row-${docId}`);
-      if (row) row.style.opacity = 0.5;
+      newConfirmBtn.addEventListener('click', () => {
+        closeConfirmModal();
+        onConfirm();
+      });
+      document.getElementById('confirmModal').classList.add('active');
+    }
 
-      try {
-        const resp = await fetch(`/api/v1/documents/${docId}`, { method: 'DELETE' });
-        if (resp.ok) {
+    function closeConfirmModal() {
+      document.getElementById('confirmModal').classList.remove('active');
+    }
+
+    function deleteDoc(docId) {
+      openConfirmModal(`Are you sure you want to delete document "${docId}" and all its chunk data?`, async () => {
+        const row = document.getElementById(`doc-row-${docId}`);
+        if (row) row.style.opacity = 0.5;
+
+        try {
+          const resp = await fetch(`/api/v1/documents/${docId}`, { method: 'DELETE' });
+          if (resp.ok) {
+            fetchDocuments();
+          } else {
+            alert('Failed to delete document');
+            if (row) row.style.opacity = 1;
+          }
+        } catch (err) {
+          alert('Error deleting document: ' + err);
           fetchDocuments();
-        } else {
-          alert('Failed to delete document');
         }
-      } catch (err) {
-        alert('Error deleting document: ' + err);
-        fetchDocuments();
-      }
+      });
     }
 
     // ── Ingestion Panel ──
@@ -1360,5 +1440,16 @@
       }
     }
   </script>
+  <!-- Custom Confirm Modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-content">
+      <div class="modal-title">Delete Document</div>
+      <div class="modal-body" id="confirmModalBody">Are you sure you want to delete this document?</div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeConfirmModal()">Cancel</button>
+        <button class="btn-confirm-danger" id="confirmModalBtn">Delete</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
