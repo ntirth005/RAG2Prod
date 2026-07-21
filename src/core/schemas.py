@@ -88,6 +88,7 @@ class ValidationResult(BaseModel):
 
 class MetadataFilter(BaseModel):
     document_id: Optional[str] = Field(None, description="Filter by specific document ID.")
+    document_ids: Optional[List[str]] = Field(None, description="Filter by a list of document IDs.")
     metadata_equals: Dict[str, Any] = Field(default_factory=dict, description="Key-value pairs to match in source_metadata JSONB.")
 
 

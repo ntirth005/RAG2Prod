@@ -543,9 +543,13 @@
                    oninput="document.getElementById('scoreVal').innerText = parseFloat(this.value).toFixed(2)">
           </div>
         </div>
-        <div class="form-group">
-          <label>Filter Document ID (Optional)</label>
-          <input type="text" id="filterDocId" placeholder="e.g. doc_report_2026">
+        <div class="form-group" id="filterContainer">
+          <label>Filter by Documents (Optional)</label>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: -0.2rem; display: flex; justify-content: space-between; align-items: center;">
+            <span>Select documents from the Ingestion Workspace.</span>
+            <button class="btn-mini" onclick="document.querySelectorAll('.doc-filter-cb').forEach(cb => cb.checked = false)">Clear Selections</button>
+          </div>
+          <input type="hidden" id="filterDocId">
         </div>
         <button class="btn-action" onclick="submitSearch()">Execute Cosine Vector Search</button>
         <div id="searchResults" style="margin-top: 0.5rem; overflow-y: auto; max-height: 400px;">
@@ -1163,12 +1167,14 @@
         if (docs.length > 0) {
           docList.innerHTML = docs.map(doc => `
             <div class="doc-item-row" id="doc-row-${doc.document_id}">
-              <div class="doc-item-info">
-                <span class="doc-item-name" title="${escapeHtml(doc.filename)}">${escapeHtml(doc.filename)}</span>
-                <span class="doc-item-id">ID: ${escapeHtml(doc.document_id)}</span>
+              <div class="doc-item-info" style="flex-direction: row; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" class="doc-filter-cb" value="${escapeHtml(doc.document_id)}" id="cb-${doc.document_id}" style="cursor: pointer;">
+                <div style="display: flex; flex-direction: column; gap: 0.2rem; min-width: 0;">
+                  <span class="doc-item-name" title="${escapeHtml(doc.filename)}"><label for="cb-${doc.document_id}" style="color: #f3f4f6; cursor: pointer; font-size: inherit;">${escapeHtml(doc.filename)}</label></span>
+                  <span class="doc-item-id">ID: ${escapeHtml(doc.document_id)}</span>
+                </div>
               </div>
               <div class="doc-item-actions">
-                <button class="btn-mini" onclick="selectDocForFilter('${escapeHtml(doc.document_id)}')">Reuse</button>
                 <button class="btn-mini btn-delete" onclick="deleteDoc('${escapeHtml(doc.document_id)}')">Delete</button>
               </div>
             </div>
@@ -1295,13 +1301,18 @@
 
       const topK = parseInt(document.getElementById('topKInput').value);
       const threshold = parseFloat(document.getElementById('scoreInput').value);
-      const filterDocId = document.getElementById('filterDocId').value.trim();
+      
+      const checkedBoxes = Array.from(document.querySelectorAll('.doc-filter-cb:checked')).map(cb => cb.value);
+      let filterPayload = null;
+      if (checkedBoxes.length > 0) {
+        filterPayload = { document_ids: checkedBoxes };
+      }
 
       const payload = {
         query_text: queryText,
         top_k: topK,
         score_threshold: threshold,
-        filter: filterDocId ? { document_id: filterDocId } : null
+        filter: filterPayload
       };
 
       const resContainer = document.getElementById('searchResults');

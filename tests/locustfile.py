@@ -25,6 +25,22 @@ class RAG2ProdUser(HttpUser):
         }
         self.client.post("/api/v1/retrieval/search", json=payload, name="/api/v1/retrieval/search")
 
+    @task(2)
+    def ingest_document(self):
+        """Simulate document ingestion bombardment"""
+        import uuid
+        import io
+        doc_id = f"doc_load_test_{uuid.uuid4().hex[:8]}"
+        file_content = b"This is a dummy text document for load testing. It contains some basic information to be chunked and embedded."
+        files = {
+            "file": ("dummy.txt", io.BytesIO(file_content), "text/plain")
+        }
+        data = {
+            "doc_id": doc_id,
+            "metadata_json": '{"source": "load_test"}'
+        }
+        self.client.post("/api/v1/documents/ingest", files=files, data=data, name="/api/v1/documents/ingest")
+
     @task(1)
     def full_rag_query(self):
         """Simulate a full RAG streaming generation request"""

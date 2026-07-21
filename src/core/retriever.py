@@ -55,6 +55,8 @@ class DenseRetriever:
             if query.filter:
                 if query.filter.document_id:
                     stmt = stmt.where(ChildChunk.document_id == query.filter.document_id)
+                if query.filter.document_ids:
+                    stmt = stmt.where(ChildChunk.document_id.in_(query.filter.document_ids))
 
                 if query.filter.metadata_equals:
                     for key, val in query.filter.metadata_equals.items():
@@ -194,6 +196,8 @@ class SparseRetriever:
             if query.filter:
                 if query.filter.document_id:
                     stmt = stmt.where(ChildChunk.document_id == query.filter.document_id)
+                if query.filter.document_ids:
+                    stmt = stmt.where(ChildChunk.document_id.in_(query.filter.document_ids))
 
                 if query.filter.metadata_equals:
                     for key, val in query.filter.metadata_equals.items():

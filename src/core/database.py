@@ -30,7 +30,8 @@ async_session_maker = async_sessionmaker(
 )
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency injection generator to yield active database sessions."""
+    """Dependency that provides an asynchronous database session."""
+    print("REAL GET_DB_SESSION WAS CALLED!")
     async with async_session_maker() as session:
         try:
             yield session
