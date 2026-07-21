@@ -23,6 +23,7 @@ dependencies = [
     "python-json-logger>=4.1.0",
     "prometheus-fastapi-instrumentator>=8.0.2",
     "aiofiles>=25.1.0",
+    "tenacity>=8.5.0",
 ]
 
 [project.optional-dependencies]
