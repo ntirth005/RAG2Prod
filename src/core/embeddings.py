@@ -2,6 +2,7 @@ import httpx
 from typing import List, Optional
 from core.config import settings
 from core.logger import info
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 class EmbeddingClient:
     """
@@ -22,6 +23,12 @@ class EmbeddingClient:
         self.model_name = model_name or settings.EMBEDDING_MODEL_NAME
         self.dimension = settings.EMBEDDING_DIMENSION
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception_type(httpx.HTTPError),
+        reraise=True
+    )
     async def get_embedding(self, text: str) -> List[float]:
         """Generate an embedding vector for a single text chunk."""
         if not self.api_key:
@@ -44,6 +51,12 @@ class EmbeddingClient:
         resp_data = response.json()
         return resp_data["embedding"]["values"]
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception_type(httpx.HTTPError),
+        reraise=True
+    )
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Generate embedding vectors for a batch of text chunks."""
         # Using Gemini batch endpoint: batchEmbedContents
