@@ -43,6 +43,11 @@ class DocumentMetadata(BaseModel):
     url: Optional[str] = Field(None, description="Source URL reference.")
     page_number: Optional[int] = Field(None, description="Page number details.")
     last_modified: Optional[str] = Field(None, description="Last modification timestamp.")
+    has_code_blocks: Optional[bool] = Field(False, description="True if chunk contains code blocks.")
+    has_tables: Optional[bool] = Field(False, description="True if chunk contains tables.")
+    image_refs: List[str] = Field(default_factory=list, description="Paths/URLs to embedded diagrams or images.")
+    layout_type: Optional[str] = Field(None, description="Layout element type (code, table, heading, paragraph, diagram).")
+
 
 
 class DocumentChunk(BaseModel):
@@ -91,6 +96,8 @@ class RetrievalQuery(BaseModel):
     top_k: int = Field(5, ge=1, le=100, description="Maximum number of chunks to retrieve.")
     score_threshold: float = Field(0.0, ge=0.0, le=1.0, description="Minimum similarity threshold (0.0 to 1.0).")
     filter: Optional[MetadataFilter] = Field(None, description="Optional metadata filter rules.")
+    mode: str = Field("hybrid", description="Retrieval mode: 'dense', 'sparse', or 'hybrid'.")
+    rerank: bool = Field(True, description="True to enable cross-encoder reranking.")
 
 
 class RetrievalResultItem(BaseModel):
@@ -100,6 +107,7 @@ class RetrievalResultItem(BaseModel):
     chunk_text: str = Field(..., description="Text of matching child chunk.")
     parent_text: str = Field(..., description="Full text of parent chunk context.")
     similarity_score: float = Field(..., description="Cosine similarity score (0.0 to 1.0).")
+    rerank_score: float = Field(0.0, description="Cross-Encoder rerank score (0.0 to 1.0).")
     source_metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata dictionary.")
 
 
@@ -149,6 +157,10 @@ class CitationSource(BaseModel):
     text_snippet: str = Field("", description="Short snippet of the source text for UI highlighting.")
     parent_text: str = Field("", description="The full parent chunk context text.")
     location: Optional[SourceLocation] = Field(None, description="Detailed location offsets and line numbers for dynamic highlighting.")
+    image_refs: List[str] = Field(default_factory=list, description="Paths/URLs to embedded diagrams or images associated with this source.")
+    has_code_blocks: bool = Field(False, description="True if source chunk contains code blocks.")
+    has_tables: bool = Field(False, description="True if source chunk contains tables.")
+
 
 
 

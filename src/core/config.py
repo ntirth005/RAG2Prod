@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     OCR_CACHE_DIR: str = ".cache/ocr"
     OBJECT_STORAGE_LOCAL_DIR: str = ".storage"
 
+    # Hybrid Retrieval & Reranking Configurations (Stage 7)
+    ENABLE_HYBRID_SEARCH: bool = True
+    ENABLE_RERANKING: bool = True
+    RERANKER_MODEL_NAME: str = "BAAI/bge-reranker-base"
+    RRF_K_CONSTANT: int = 60
+    HYBRID_TOP_K_CANDIDATES: int = 20
+
     # Pydantic settings configuration
     model_config = SettingsConfigDict(
         env_file=".env",

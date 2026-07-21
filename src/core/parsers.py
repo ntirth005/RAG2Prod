@@ -84,29 +84,83 @@ async def parse_pdf_file(
     api_key: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
-    Parses a PDF file page-by-page.
-    If programmatic extraction yields empty text, triggers the vision LLM-OCR tool on the page.
-    Returns a list of dicts: [{"page_number": int, "text": str}]
+    Parses a PDF file using IBM Docling for layout-aware structure extraction (preserving code blocks, 
+    tables, headings, and reading order).
+    Falls back to pypdf + Gemini Vision OCR if Docling is unavailable or page text is sparse.
+    Returns a list of dicts: [{"page_number": int, "text": str, "raw_text": str, "has_code_blocks": bool, "has_tables": bool}]
     """
-    info("parser", f"Opening PDF: {file_path.name}")
-    reader = PdfReader(file_path)
+    info("parser", f"Opening PDF with layout-aware parser: {file_path.name}")
     parsed_pages = []
 
+    # Attempt Docling DocumentConverter for lossless layout parsing
+    try:
+        from docling.document_converter import DocumentConverter
+        info("parser", f"Initializing Docling DocumentConverter for {file_path.name}")
+        converter = DocumentConverter()
+        doc_result = converter.convert(str(file_path))
+        doc = doc_result.document
+        
+        # Docling allows exporting full markdown or per-page content
+        # Check if per-page export is supported or iterate pages
+        if hasattr(doc, "pages") and doc.pages:
+            for page_no, page_obj in doc.pages.items():
+                # Export page markdown or text elements
+                page_md = ""
+                if hasattr(page_obj, "export_to_markdown"):
+                    page_md = page_obj.export_to_markdown()
+                else:
+                    # Fallback to page text export
+                    page_md = str(page_obj)
+
+                if not page_md.strip():
+                    # If page markdown is empty, export full doc or fallback
+                    page_md = doc.export_to_markdown()
+
+                has_code = "```" in page_md
+                has_tables = "|" in page_md and "\n" in page_md
+
+                parsed_pages.append({
+                    "page_number": int(page_no),
+                    "text": page_md.strip(),
+                    "raw_text": page_md.strip(),
+                    "has_code_blocks": has_code,
+                    "has_tables": has_tables
+                })
+        else:
+            full_md = doc.export_to_markdown()
+            has_code = "```" in full_md
+            has_tables = "|" in full_md
+            parsed_pages.append({
+                "page_number": 1,
+                "text": full_md.strip(),
+                "raw_text": full_md.strip(),
+                "has_code_blocks": has_code,
+                "has_tables": has_tables
+            })
+            
+        if parsed_pages and any(p["text"] for p in parsed_pages):
+            info("parser", f"Docling successfully parsed {len(parsed_pages)} pages for {file_path.name}")
+            return parsed_pages
+
+    except Exception as e:
+        info("parser", f"Docling parsing notice for {file_path.name}: {e}. Proceeding with pypdf + Vision fallback.")
+
+    # Fallback: pypdf page-by-page + Gemini Vision OCR for scanned/sparse pages
+    reader = PdfReader(file_path)
     for i, page in enumerate(reader.pages):
         page_num = i + 1
         text = page.extract_text() or ""
         text = text.strip()
 
-        # Heuristic check: trigger OCR if text is extremely short (<10 chars)
-        # OR if text is short (<150 chars) and page contains images (likely a digital watermark/header on a scan)
         has_images = len(page.images) > 0
         trigger_ocr = (len(text) < 10) or (len(text) < 150 and has_images)
+        has_code = "```" in text
+        has_tables = "|" in text
 
         if trigger_ocr:
             image_data = None
             if has_images:
                 try:
-                    # Get the first image on the page
                     image_data = page.images[0].data
                 except Exception:
                     pass
@@ -115,8 +169,10 @@ async def parse_pdf_file(
                 try:
                     ocr_res: OCRExtractionResult = await ocr_page(image_data, api_key=api_key)
                     text = ocr_res.markdown_content
-                except Exception as e:
-                    text = f"[OCR Failed on page {page_num}: {e}]"
+                    has_code = ocr_res.has_code_blocks
+                    has_tables = ocr_res.has_tables
+                except Exception as ex:
+                    text = f"[OCR Failed on page {page_num}: {ex}]"
             else:
                 text = f"[Scanned page {page_num} detected, but no extractable image data was found.]"
         else:
@@ -125,7 +181,9 @@ async def parse_pdf_file(
         parsed_pages.append({
             "page_number": page_num,
             "text": text,
-            "raw_text": page.extract_text() or text
+            "raw_text": page.extract_text() or text,
+            "has_code_blocks": has_code,
+            "has_tables": has_tables
         })
 
     return parsed_pages

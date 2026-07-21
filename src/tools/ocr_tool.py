@@ -11,7 +11,8 @@ from core.logger import info
 
 class OCRExtractionResult(BaseModel):
     markdown_content: str = Field(..., description="The parsed text, formatted in clean Markdown.")
-    has_tables: bool = Field(..., description="True if tables were parsed/found in the document page.")
+    has_tables: bool = Field(False, description="True if tables were parsed/found in the document page.")
+    has_code_blocks: bool = Field(False, description="True if code blocks were parsed/found.")
     detected_language: str = Field("en", description="ISO language code detected.")
 
 def get_image_hash(image_bytes: bytes) -> str:
@@ -73,6 +74,7 @@ async def ocr_page(
         return OCRExtractionResult(
             markdown_content="[Error: GEMINI_API_KEY not configured. LLM OCR requires a valid API key.]",
             has_tables=False,
+            has_code_blocks=False,
             detected_language="en"
         )
 
@@ -80,16 +82,17 @@ async def ocr_page(
     base64_data = base64.b64encode(image_bytes).decode("utf-8")
 
     prompt = (
-        "Perform OCR on this document page. Transcribe all text, preserving the visual layout and structure.\n"
+        "Perform lossless layout-aware document OCR on this page image.\n"
         "Rules:\n"
-        "1. Preserve headings (using markdown #, ##, ###).\n"
-        "2. Keep lists and list nesting intact.\n"
-        "3. Convert tables into clean, readable Markdown tables.\n"
-        "4. Do NOT summarize or add commentary. Output ONLY the transcribed content.\n"
+        "1. Preserve headings exactly (using markdown #, ##, ###).\n"
+        "2. Preserve CODE BLOCKS using fenced code blocks (```language ... ```) with syntax tags.\n"
+        "3. Convert tables into clean, aligned Markdown tables (| col1 | col2 |).\n"
+        "4. Describe flowcharts, diagrams, and figures comprehensively as `![Figure: Title](Detailed description)`.\n"
         "5. Output your result strictly as JSON matching this schema:\n"
         "{\n"
         "  \"markdown_content\": \"string\",\n"
         "  \"has_tables\": true/false,\n"
+        "  \"has_code_blocks\": true/false,\n"
         "  \"detected_language\": \"en\"\n"
         "}"
     )
@@ -117,9 +120,10 @@ async def ocr_page(
                 "properties": {
                     "markdown_content": {"type": "STRING"},
                     "has_tables": {"type": "BOOLEAN"},
+                    "has_code_blocks": {"type": "BOOLEAN"},
                     "detected_language": {"type": "STRING"}
                 },
-                "required": ["markdown_content", "has_tables", "detected_language"]
+                "required": ["markdown_content", "has_tables", "has_code_blocks", "detected_language"]
             }
         }
     }

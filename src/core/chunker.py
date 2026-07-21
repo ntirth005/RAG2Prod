@@ -245,6 +245,13 @@ class StructureAwareChunker:
                     if raw_text else (c_start, c_end, c_sline, c_eline)
                 )
 
+                has_code = "```" in child_text or metadata.get("has_code_blocks", False)
+                has_tables = ("|" in child_text and "\n" in child_text) or metadata.get("has_tables", False)
+                
+                # Extract markdown image references: ![caption](url_or_path)
+                image_matches = re.findall(r"!\[.*?\]\((.*?)\)", child_text)
+                image_refs = metadata.get("image_refs", []) + image_matches
+
                 chunk_meta = {
                     **metadata,
                     "parent_id": parent_id,
@@ -261,6 +268,9 @@ class StructureAwareChunker:
                     "parent_end_char": p_end,
                     "parent_start_line": p_sline,
                     "parent_end_line": p_eline,
+                    "has_code_blocks": has_code,
+                    "has_tables": has_tables,
+                    "image_refs": image_refs,
                 }
 
                 results.append({

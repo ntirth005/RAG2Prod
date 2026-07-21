@@ -86,6 +86,9 @@ class CitationMapper:
                     text_snippet=snippet,
                     parent_text=item.parent_text or item.chunk_text,
                     location=loc,
+                    image_refs=meta.get("image_refs", []),
+                    has_code_blocks=meta.get("has_code_blocks", False),
+                    has_tables=meta.get("has_tables", False),
                 )
             )
             citation_index += 1
