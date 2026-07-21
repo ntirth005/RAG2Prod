@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from core.models import Document, ParentChunk, ChildChunk
 from core.object_storage import BaseObjectStorage, LocalObjectStorage
@@ -22,6 +24,12 @@ class StorageService:
         self.session = session
         self.object_storage = object_storage or LocalObjectStorage()
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=4),
+        retry=retry_if_exception_type(IntegrityError),
+        reraise=True
+    )
     async def save_document(
         self,
         doc_id: str,
