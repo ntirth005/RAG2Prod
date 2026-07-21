@@ -17,10 +17,10 @@ def count_tokens(text: str) -> int:
     """Return the number of tokens in the given text using the tiktoken encoding."""
     return len(_encoder.encode(text))
 
-def generate_chunk_id(doc_id: str, text: str) -> str:
-    """Generate a deterministic UUID v5 chunk ID from doc_id and chunk text."""
+def generate_chunk_id(doc_id: str, text: str, index: int = 0) -> str:
+    """Generate a deterministic UUID v5 chunk ID from doc_id, index, and chunk text."""
     # Using NAMESPACE_DNS as namespace
-    name = f"{doc_id}:{hashlib_sha256_hash(text)}"
+    name = f"{doc_id}:{index}:{hashlib_sha256_hash(text)}"
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, name))
 
 def hashlib_sha256_hash(text: str) -> str:
@@ -219,8 +219,8 @@ class StructureAwareChunker:
         results = []
         parent_search_cursor = 0
 
-        for parent_text in parents:
-            parent_id = generate_chunk_id(doc_id, parent_text)
+        for p_idx, parent_text in enumerate(parents):
+            parent_id = generate_chunk_id(doc_id, parent_text, p_idx)
 
             p_start, p_end, p_sline, p_eline = compute_offsets(text, parent_text, search_from=parent_search_cursor)
             parent_search_cursor = p_start
@@ -234,8 +234,8 @@ class StructureAwareChunker:
             child_texts = self._create_child_chunks(parent_text)
 
             child_search_cursor = p_start
-            for child_text in child_texts:
-                child_id = generate_chunk_id(doc_id, child_text)
+            for c_idx, child_text in enumerate(child_texts):
+                child_id = generate_chunk_id(doc_id, child_text, c_idx)
 
                 c_start, c_end, c_sline, c_eline = compute_offsets(text, child_text, search_from=child_search_cursor)
                 child_search_cursor = c_start
