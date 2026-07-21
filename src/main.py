@@ -1,5 +1,6 @@
 import json
 import time
+import aiofiles
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Optional, Dict, Any, List
@@ -12,6 +13,7 @@ from sqlalchemy import select
 from core.config import settings
 from core.database import get_db_session
 from core.storage_service import StorageService
+from core.ingestion import IngestionPipeline
 from core.retriever import DenseRetriever
 from core.generator import RAGPipeline
 from core.models import Document
@@ -27,13 +29,17 @@ from core.schemas import (
 from core.logger import info, error as log_error
 
 from contextlib import asynccontextmanager
-from core.database import get_db_session, init_db
+from core.database import get_db_session, init_db, async_session_maker
+import asyncio
+from prometheus_fastapi_instrumentator import Instrumentator
+from sqlalchemy import text
 
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI):
     """Initialize database schema & pgvector extension on startup."""
     info("app", "Starting up RAG2Prod FastAPI Server...")
     await init_db()
+    instrumentator.expose(app_instance)
     yield
     info("app", "Shutting down RAG2Prod FastAPI Server...")
 
@@ -43,15 +49,23 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+instrumentator = Instrumentator().instrument(app)
 
-@app.get("/health", tags=["Health"])
-async def health_check() -> dict[str, str]:
-    """Simple health check endpoint."""
-    return {
-        "status": "healthy",
-        "project": settings.PROJECT_NAME,
-        "version": "0.1.0"
-    }
+
+@app.get("/health/liveness", tags=["Health"])
+async def liveness_probe() -> dict[str, str]:
+    """Basic liveness probe indicating process is running."""
+    return {"status": "alive"}
+
+@app.get("/health/readiness", tags=["Health"])
+async def readiness_probe(db: AsyncSession = Depends(get_db_session)) -> dict[str, str]:
+    """Readiness probe checking database connectivity."""
+    try:
+        await db.execute(text("SELECT 1"))
+        return {"status": "ready"}
+    except Exception as e:
+        log_error("health", f"Readiness probe failed: {e}")
+        raise HTTPException(status_code=503, detail="Database is unavailable")
 
 
 @app.get("/", response_class=HTMLResponse, tags=["Root"])
@@ -93,12 +107,15 @@ async def ingest_document(
     suffix = Path(file.filename).suffix if file.filename else ".txt"
     try:
         with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            content = await file.read()
-            tmp.write(content)
             tmp_path = Path(tmp.name)
+            
+        async with aiofiles.open(tmp_path, 'wb') as out_file:
+            while content := await file.read(1024 * 1024):
+                await out_file.write(content)
 
         service = StorageService(session=db)
-        response = await service.ingest_file(
+        pipeline = IngestionPipeline(storage_service=service)
+        response = await pipeline.ingest_file(
             file_path=tmp_path,
             doc_id=doc_id,
             metadata=metadata,
@@ -141,31 +158,44 @@ async def ingest_documents_batch(
                 detail=f"Invalid metadata_json string: {e}",
             )
 
-    service = StorageService(session=db)
-    results: List[IngestionResponse] = []
-    errors: List[Dict[str, str]] = []
-
-    for file in files:
+    async def process_single_file(file: UploadFile) -> Dict[str, Any]:
         suffix = Path(file.filename).suffix if file.filename else ".txt"
         tmp_path = None
         try:
             with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                content = await file.read()
-                tmp.write(content)
                 tmp_path = Path(tmp.name)
+                
+            async with aiofiles.open(tmp_path, 'wb') as out_file:
+                while content := await file.read(1024 * 1024):
+                    await out_file.write(content)
 
-            response = await service.ingest_file(
-                file_path=tmp_path,
-                metadata=metadata,
-                original_filename=file.filename,
-            )
-            results.append(response)
+            async with async_session_maker() as session:
+                service = StorageService(session=session)
+                pipeline = IngestionPipeline(storage_service=service)
+                response = await pipeline.ingest_file(
+                    file_path=tmp_path,
+                    metadata=metadata,
+                    original_filename=file.filename,
+                )
+                return {"success": True, "response": response}
         except Exception as e:
             log_error("api", f"Batch ingestion error for {file.filename}: {e}")
-            errors.append({"filename": file.filename or "unknown", "error": str(e)})
+            return {"success": False, "filename": file.filename or "unknown", "error": str(e)}
         finally:
             if tmp_path and tmp_path.exists():
                 tmp_path.unlink()
+
+    tasks = [process_single_file(file) for file in files]
+    task_results = await asyncio.gather(*tasks)
+
+    results: List[IngestionResponse] = []
+    errors: List[Dict[str, str]] = []
+
+    for res in task_results:
+        if res["success"]:
+            results.append(res["response"])
+        else:
+            errors.append({"filename": res["filename"], "error": res["error"]})
 
     return BatchIngestionResponse(
         total_files=len(files),
@@ -237,6 +267,8 @@ async def delete_document_endpoint(
         return {"status": "deleted", "document_id": doc_id}
     except HTTPException:
         raise
+    except Exception as e:
+        log_error("api", f"Delete document error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete document: {str(e)}",
@@ -267,14 +299,14 @@ async def get_document_file(
                 detail="Storage path reference not found in metadata.",
             )
 
-        file_path = Path(storage_path_rel)
-        if not file_path.is_absolute():
-            file_path = Path(settings.OBJECT_STORAGE_LOCAL_DIR) / file_path
-
-        if not file_path.exists():
-            # Try to resolve relative to storage folder by filename only
-            file_path = Path(settings.OBJECT_STORAGE_LOCAL_DIR) / Path(storage_path_rel).name
-            if not file_path.exists():
+        base_dir = Path(settings.OBJECT_STORAGE_LOCAL_DIR).resolve()
+        
+        # Try relative to base dir first
+        file_path = (base_dir / Path(storage_path_rel)).resolve()
+        if not file_path.is_relative_to(base_dir) or not file_path.exists():
+            # Try filename only fallback securely
+            file_path = (base_dir / Path(storage_path_rel).name).resolve()
+            if not file_path.is_relative_to(base_dir) or not file_path.exists():
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Physical document file not found in storage directory.",
